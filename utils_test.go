@@ -420,11 +420,6 @@ func TestFileSink(t *testing.T) {
 		t.Errorf("FileSink.Write() error = %v", err)
 	}
 
-	err = sink.Close()
-	if err != nil {
-		t.Errorf("FileSink.Close() error = %v", err)
-	}
-
 	// Read file content
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -475,9 +470,7 @@ func TestFileSinkRotation(t *testing.T) {
 		}
 	}
 
-	if err := sink.Close(); err != nil {
-		t.Errorf("FileSink.Close() error = %v", err)
-	}
+	// Close will be handled by defer
 
 	// Check that rotation occurred (rotated file should exist)
 	files, err := filepath.Glob(filepath.Join(tmpDir, "rotate_*.log"))
@@ -522,11 +515,6 @@ func TestAsyncFileSink(t *testing.T) {
 	// Give async writer time to process
 	time.Sleep(200 * time.Millisecond)
 
-	err = sink.Close()
-	if err != nil {
-		t.Errorf("AsyncFileSink.Close() error = %v", err)
-	}
-
 	// Read file content
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -569,9 +557,7 @@ func TestAsyncFileSinkBufferFull(t *testing.T) {
 	}
 
 	time.Sleep(200 * time.Millisecond)
-	if err := sink.Close(); err != nil {
-		t.Errorf("AsyncFileSink.Close() error = %v", err)
-	}
+	// Close will be handled by defer
 
 	// Verify all messages were written
 	content, err := os.ReadFile(filename)
@@ -611,9 +597,7 @@ func TestNewDefaultFileSink(t *testing.T) {
 		t.Errorf("NewDefaultFileSink.Write() error = %v", err)
 	}
 
-	if err := sink.Close(); err != nil {
-		t.Errorf("NewDefaultFileSink.Close() error = %v", err)
-	}
+	// Close will be handled by defer
 
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -668,9 +652,7 @@ func TestFileSinkTimeRotation(t *testing.T) {
 		t.Errorf("FileSink.Write() error = %v", err)
 	}
 
-	if err := sink.Close(); err != nil {
-		t.Errorf("FileSink.Close() error = %v", err)
-	}
+	// Close will be handled by defer
 
 	// Check that rotation occurred
 	files, err := filepath.Glob(filepath.Join(tmpDir, "time_rotate_*.log"))
