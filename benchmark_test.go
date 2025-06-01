@@ -19,7 +19,7 @@ func (ns *NullSink) Close() error {
 	return nil
 }
 
-// BenchmarkLogInfo benchmarks basic info logging
+// TEST: GIVEN a logger with null sink WHEN logging info messages repeatedly THEN benchmark measures throughput
 func BenchmarkLogInfo(b *testing.B) {
 	// Create a standalone logger for benchmarking
 	logger := &Logger{
@@ -90,7 +90,7 @@ func BenchmarkLogInfo(b *testing.B) {
 	logger.wg.Wait()
 }
 
-// BenchmarkLogInfoWithFields benchmarks logging with structured fields
+// TEST: GIVEN a logger with null sink WHEN logging info messages with fields repeatedly THEN benchmark measures structured logging throughput
 func BenchmarkLogInfoWithFields(b *testing.B) {
 	// Create a standalone logger for benchmarking
 	logger := &Logger{
@@ -164,7 +164,7 @@ func BenchmarkLogInfoWithFields(b *testing.B) {
 	logger.wg.Wait()
 }
 
-// BenchmarkLogLevelFiltering benchmarks level filtering performance
+// TEST: GIVEN a logger with high level filtering WHEN logging low-level messages repeatedly THEN benchmark measures filtering performance
 func BenchmarkLogLevelFiltering(b *testing.B) {
 	// Create a standalone logger for benchmarking
 	logger := &Logger{
@@ -227,7 +227,7 @@ func BenchmarkLogLevelFiltering(b *testing.B) {
 	}
 }
 
-// BenchmarkJSONMarshal benchmarks JSON marshaling performance
+// TEST: GIVEN log entries with various fields WHEN marshaling to JSON repeatedly THEN benchmark measures JSON serialization performance
 func BenchmarkJSONMarshal(b *testing.B) {
 	entry := &Entry{
 		Level:     InfoLevel,
@@ -250,7 +250,7 @@ func BenchmarkJSONMarshal(b *testing.B) {
 	}
 }
 
-// BenchmarkRingBuffer benchmarks the lock-free ring buffer
+// TEST: GIVEN a RingBuffer WHEN pushing entries in parallel THEN benchmark measures lock-free buffer performance
 func BenchmarkRingBuffer(b *testing.B) {
 	rb := NewRingBuffer(8192)
 	entry := &Entry{
@@ -268,7 +268,7 @@ func BenchmarkRingBuffer(b *testing.B) {
 	})
 }
 
-// BenchmarkConsoleSink benchmarks console output performance
+// TEST: GIVEN console sink with redirected output WHEN writing batches of entries THEN benchmark measures console output performance
 func BenchmarkConsoleSink(b *testing.B) {
 	// Redirect stdout to null to avoid terminal overhead
 	oldStdout := os.Stdout
@@ -297,7 +297,7 @@ func BenchmarkConsoleSink(b *testing.B) {
 	}
 }
 
-// BenchmarkFileSink benchmarks file output performance
+// TEST: GIVEN file sink with temp file WHEN writing batches of entries THEN benchmark measures file output performance
 func BenchmarkFileSink(b *testing.B) {
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "logmgr_bench_*.log")
@@ -343,7 +343,7 @@ func BenchmarkFileSink(b *testing.B) {
 	}
 }
 
-// BenchmarkAsyncFileSink benchmarks async file output performance
+// TEST: GIVEN async file sink with buffer WHEN writing batches of entries THEN benchmark measures async file output performance
 func BenchmarkAsyncFileSink(b *testing.B) {
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "logmgr_async_bench_*.log")
@@ -389,7 +389,7 @@ func BenchmarkAsyncFileSink(b *testing.B) {
 	}
 }
 
-// BenchmarkConcurrentLogging benchmarks concurrent logging from multiple goroutines
+// TEST: GIVEN logger with multiple workers WHEN logging concurrently from multiple goroutines THEN benchmark measures concurrent logging performance
 func BenchmarkConcurrentLogging(b *testing.B) {
 	// Create a standalone logger for benchmarking
 	logger := &Logger{

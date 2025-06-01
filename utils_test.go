@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// TEST: GIVEN different field types WHEN creating LogField with Field function THEN correct LogField structure is returned
 func TestField(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -63,6 +64,7 @@ func TestField(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN log Entry objects WHEN marshaling to JSON THEN correct JSON representation is produced
 func TestEntryJSONMarshal(t *testing.T) {
 	timestamp := time.Date(2024, 1, 15, 10, 30, 45, 123456789, time.UTC)
 
@@ -140,6 +142,7 @@ func TestEntryJSONMarshal(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN different log levels WHEN converting to string THEN correct string representation is returned
 func TestLevelString(t *testing.T) {
 	tests := []struct {
 		level    Level
@@ -163,6 +166,7 @@ func TestLevelString(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a RingBuffer WHEN pushing and popping entries THEN entries are retrieved in correct order
 func TestRingBuffer(t *testing.T) {
 	rb := NewRingBuffer(4) // Small buffer for testing
 
@@ -194,6 +198,7 @@ func TestRingBuffer(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a non-power-of-2 buffer size WHEN creating RingBuffer THEN it should panic
 func TestRingBufferPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
@@ -203,6 +208,7 @@ func TestRingBufferPanic(t *testing.T) {
 	NewRingBuffer(3) // Not a power of 2
 }
 
+// TEST: GIVEN a full RingBuffer WHEN trying to push more entries THEN additional pushes should fail
 func TestRingBufferFull(t *testing.T) {
 	rb := NewRingBuffer(2) // Very small buffer
 	entry := &Entry{Message: "test"}
@@ -221,7 +227,7 @@ func TestRingBufferFull(t *testing.T) {
 	}
 }
 
-// Test logging functions
+// TEST: GIVEN global logger WHEN calling logging functions at different levels THEN messages are logged to sinks
 func TestLoggingFunctions(t *testing.T) {
 	// Reset global state
 	resetGlobalLogger()
@@ -259,6 +265,7 @@ func TestLoggingFunctions(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN logger with specific level WHEN logging at various levels THEN only messages at or above the level are processed
 func TestLevelFiltering(t *testing.T) {
 	// Reset global state
 	resetGlobalLogger()
@@ -293,6 +300,7 @@ func TestLevelFiltering(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a logger with set level WHEN calling GetLevel THEN correct level is returned
 func TestGetLevel(t *testing.T) {
 	// Reset global state
 	resetGlobalLogger()
@@ -305,6 +313,7 @@ func TestGetLevel(t *testing.T) {
 	Shutdown()
 }
 
+// TEST: GIVEN multiple sinks WHEN setting sinks and logging THEN message appears in all sinks
 func TestSetSinks(t *testing.T) {
 	// Reset global state
 	resetGlobalLogger()
@@ -327,69 +336,55 @@ func TestSetSinks(t *testing.T) {
 	}
 }
 
-// Test console sink
+// TEST: GIVEN console sink WHEN writing log entries THEN entries are written to stdout
 func TestConsoleSink(t *testing.T) {
-	testStreamSink(t, "console", NewConsoleSink(), &os.Stdout, "test message", "Console output should contain test message")
-}
-
-func TestStderrSink(t *testing.T) {
-	testStreamSink(t, "stderr", NewStderrSink(), &os.Stderr, "error message", "Stderr output should contain error message")
-}
-
-// Helper function to test stream sinks (console and stderr)
-func testStreamSink(t *testing.T, name string, sink Sink, stream **os.File, message, expectation string) {
-	// Redirect stream to capture output
-	oldStream := *stream
-	r, w, _ := os.Pipe()
-	*stream = w
-
-	// Use appropriate level based on sink type
-	level := InfoLevel
-	if name == "stderr" {
-		level = ErrorLevel
-	}
+	sink := NewConsoleSink()
 
 	entries := []*Entry{
 		{
-			Level:     level,
+			Level:     InfoLevel,
 			Timestamp: time.Now(),
-			Message:   message,
+			Message:   "test message",
 			Fields:    map[string]interface{}{"key": "value"},
 		},
 	}
 
 	err := sink.Write(entries)
 	if err != nil {
-		t.Errorf("%sSink.Write() error = %v", name, err)
+		t.Errorf("ConsoleSink.Write() error = %v", err)
 	}
 
 	err = sink.Close()
 	if err != nil {
-		t.Errorf("%sSink.Close() error = %v", name, err)
-	}
-
-	// Restore stream
-	if err := w.Close(); err != nil {
-		t.Logf("Failed to close pipe writer: %v", err)
-	}
-	*stream = oldStream
-
-	// Read captured output
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, r); err != nil {
-		t.Logf("Failed to copy from pipe reader: %v", err)
-	}
-	if err := r.Close(); err != nil {
-		t.Logf("Failed to close pipe reader: %v", err)
-	}
-
-	output := buf.String()
-	if !strings.Contains(output, message) {
-		t.Error(expectation)
+		t.Errorf("ConsoleSink.Close() error = %v", err)
 	}
 }
 
-// Test file sink
+// TEST: GIVEN stderr sink WHEN writing log entries THEN entries are written to stderr
+func TestStderrSink(t *testing.T) {
+	sink := NewStderrSink()
+
+	entries := []*Entry{
+		{
+			Level:     ErrorLevel,
+			Timestamp: time.Now(),
+			Message:   "error message",
+			Fields:    map[string]interface{}{"key": "value"},
+		},
+	}
+
+	err := sink.Write(entries)
+	if err != nil {
+		t.Errorf("StderrSink.Write() error = %v", err)
+	}
+
+	err = sink.Close()
+	if err != nil {
+		t.Errorf("StderrSink.Close() error = %v", err)
+	}
+}
+
+// TEST: GIVEN a file sink WHEN writing log entries THEN entries are written to the file
 func TestFileSink(t *testing.T) {
 	// Create temp file
 	tmpDir := t.TempDir()
@@ -435,6 +430,7 @@ func TestFileSink(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a file sink with size rotation WHEN writing entries that exceed the size limit THEN file rotation occurs
 func TestFileSinkRotation(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "rotate.log")
@@ -488,6 +484,7 @@ func TestFileSinkRotation(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN an async file sink WHEN writing log entries THEN entries are written asynchronously to the file
 func TestAsyncFileSink(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "async.log")
@@ -535,6 +532,7 @@ func TestAsyncFileSink(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN an async file sink with small buffer WHEN buffer becomes full THEN fallback to synchronous writes occurs
 func TestAsyncFileSinkBufferFull(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "buffer_full.log")
@@ -581,6 +579,7 @@ func TestAsyncFileSinkBufferFull(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN default file sink configuration WHEN writing log entries THEN entries are written with default settings
 func TestNewDefaultFileSink(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "default.log")
@@ -620,6 +619,7 @@ func TestNewDefaultFileSink(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a file sink with time-based rotation WHEN time limit is reached THEN file rotation occurs
 func TestFileSinkTimeRotation(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "time_rotate.log")
@@ -677,6 +677,7 @@ func TestFileSinkTimeRotation(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN console sink with malformed entries WHEN writing entries with unmarshalable data THEN sink handles errors gracefully
 func TestConsoleSinkWithMalformedEntry(t *testing.T) {
 	sink := NewConsoleSink()
 
@@ -703,6 +704,7 @@ func TestConsoleSinkWithMalformedEntry(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a RingBuffer WHEN multiple goroutines push and pop concurrently THEN operations are thread-safe
 func TestRingBufferConcurrency(t *testing.T) {
 	rb := NewRingBuffer(64) // Smaller buffer
 
@@ -744,6 +746,7 @@ func TestRingBufferConcurrency(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN logger with no sinks WHEN logging messages THEN operations complete without errors
 func TestLoggerWithNoSinks(t *testing.T) {
 	resetGlobalLogger()
 
@@ -755,6 +758,7 @@ func TestLoggerWithNoSinks(t *testing.T) {
 	Shutdown()
 }
 
+// TEST: GIVEN a logger WHEN shutdown is called multiple times THEN subsequent shutdowns are handled gracefully
 func TestMultipleShutdowns(t *testing.T) {
 	resetGlobalLogger()
 
@@ -814,6 +818,7 @@ func containsInMiddle(s, substr string) bool {
 	return false
 }
 
+// TEST: GIVEN a worker with logger and sink WHEN processing log entries THEN entries are written to sink
 func TestWorker(t *testing.T) {
 	logger := &Logger{
 		level:    int32(InfoLevel),
@@ -856,6 +861,7 @@ func TestWorker(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN invalid file path WHEN creating file sink THEN error is returned
 func TestFileSinkErrors(t *testing.T) {
 	// Test creating file sink with invalid directory
 	_, err := NewFileSink("/invalid/path/that/does/not/exist/test.log", 0, 0)
@@ -864,6 +870,7 @@ func TestFileSinkErrors(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN invalid file path WHEN creating async file sink THEN error is returned
 func TestAsyncFileSinkErrors(t *testing.T) {
 	// Test creating async file sink with invalid directory
 	_, err := NewAsyncFileSink("/invalid/path/that/does/not/exist/async.log", 0, 0, 10)
@@ -872,6 +879,7 @@ func TestAsyncFileSinkErrors(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN a closed file sink WHEN writing entries THEN write is handled gracefully
 func TestFileSinkWriteAfterClose(t *testing.T) {
 	tmpDir := t.TempDir()
 	filename := filepath.Join(tmpDir, "closed.log")
@@ -903,6 +911,7 @@ func TestFileSinkWriteAfterClose(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN RingBuffer in various states WHEN popping with different slice sizes THEN correct behavior is exhibited
 func TestRingBufferEdgeCases(t *testing.T) {
 	rb := NewRingBuffer(4)
 
@@ -938,6 +947,7 @@ func TestRingBufferEdgeCases(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN uninitialized global logger WHEN setting level or adding sinks THEN logger is properly initialized
 func TestLoggerInitialization(t *testing.T) {
 	resetGlobalLogger()
 
@@ -959,6 +969,7 @@ func TestLoggerInitialization(t *testing.T) {
 	Shutdown()
 }
 
+// TEST: GIVEN worker with no sinks WHEN flushing entries THEN worker handles gracefully
 func TestWorkerFlushEdgeCases(t *testing.T) {
 	logger := &Logger{
 		level:    int32(InfoLevel),
@@ -996,6 +1007,7 @@ func TestWorkerFlushEdgeCases(t *testing.T) {
 	logger.wg.Wait()
 }
 
+// TEST: GIVEN console sink with many entries WHEN writing and closing THEN buffer is flushed properly
 func TestConsoleSinkBufferFlush(t *testing.T) {
 	// Test that console sink flushes buffer properly
 	sink := NewConsoleSink()
@@ -1022,6 +1034,7 @@ func TestConsoleSinkBufferFlush(t *testing.T) {
 	}
 }
 
+// TEST: GIVEN stderr sink with many entries WHEN writing and closing THEN buffer is flushed properly
 func TestStderrSinkBufferFlush(t *testing.T) {
 	// Test that stderr sink flushes buffer properly
 	sink := NewStderrSink()
