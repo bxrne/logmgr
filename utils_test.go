@@ -1046,7 +1046,7 @@ func TestStderrSinkBufferFlush(t *testing.T) {
 	os.Stderr = w
 
 	defer func() {
-		w.Close()
+		_ = w.Close()
 		os.Stderr = oldStderr
 	}()
 
@@ -1290,7 +1290,7 @@ func TestFileSinkDirectoryCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() { _ = sink.Close() }()
 
 	// Verify directory was created
 	if _, err := os.Stat(filepath.Dir(nestedPath)); os.IsNotExist(err) {
@@ -1314,7 +1314,7 @@ func TestFileSinkStatError(t *testing.T) {
 
 	// Force close the underlying file to test error handling
 	if sink.file != nil {
-		sink.file.Close()
+		_ = sink.file.Close()
 		sink.file = nil
 	}
 
@@ -1334,7 +1334,7 @@ func TestFileSinkRotationNoContent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() { _ = sink.Close() }()
 
 	// Wait to trigger age-based rotation
 	time.Sleep(2 * time.Nanosecond)
@@ -1411,7 +1411,7 @@ func TestAsyncFileSinkSyncFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAsyncFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() { _ = sink.Close() }()
 
 	entry := &Entry{
 		Level:     InfoLevel,
