@@ -1,3 +1,15 @@
+## [1.0.2](https://github.com/bxrne/logmgr/compare/v1.0.1...v1.0.2) (2025-06-01)
+
+
+### Documentation
+
+* update README to enhance badge visibility and include coverage metrics ([2ab0faa](https://github.com/bxrne/logmgr/commit/2ab0faae79b93c57a869491f2cac148bb543121c))
+
+
+### Continuous Integration
+
+* remove push trigger and update golangci-lint version in CI workflow ([2bc8d2f](https://github.com/bxrne/logmgr/commit/2bc8d2f04ebec1998b3aa4b47f4c85d937f0e585))
+
 ## [1.0.1](https://github.com/bxrne/logmgr/compare/v1.0.0...v1.0.1) (2025-06-01)
 
 
