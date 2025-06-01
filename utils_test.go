@@ -343,9 +343,15 @@ func testStreamSink(t *testing.T, name string, sink Sink, stream **os.File, mess
 	r, w, _ := os.Pipe()
 	*stream = w
 
+	// Use appropriate level based on sink type
+	level := InfoLevel
+	if name == "stderr" {
+		level = ErrorLevel
+	}
+
 	entries := []*Entry{
 		{
-			Level:     InfoLevel,
+			Level:     level,
 			Timestamp: time.Now(),
 			Message:   message,
 			Fields:    map[string]interface{}{"key": "value"},
