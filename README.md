@@ -43,18 +43,7 @@ go test -bench=. -benchmem
 
 ### Performance Metrics
 
-Recent benchmark results on Intel i9-9980HK @ 2.40GHz:
-
-| Benchmark | ns/op | B/op | allocs/op | Description |
-|-----------|-------|------|-----------|-------------|
-| BenchmarkLogInfo | 90.24 | 0 | 0 | Simple log message |
-| BenchmarkLogInfoWithFields | 258.6 | 8 | 1 | Log with 4 structured fields |
-| BenchmarkLogLevelFiltering | 5.48 | 0 | 0 | Level filtering (rejected) |
-| BenchmarkJSONMarshal | 867.2 | 240 | 6 | JSON serialization |
-| BenchmarkRingBuffer | 0.26 | 0 | 0 | Lock-free ring buffer ops |
-| BenchmarkConsoleSink | 6,724 | 3,490 | 21 | Console output with batching |
-| BenchmarkFileSink | 12,281 | 3,490 | 21 | File output with batching |
-| BenchmarkConcurrentLogging | 141.8 | 0 | 0 | Multi-goroutine logging |
+See [BENCHMARKS.md](BENCHMARKS.md)
 
 ### Local Benchmarking
 
