@@ -1,11 +1,10 @@
 # logmgr
 
-[![CI](https://github.com/bxrne/logmgr/workflows/CI/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/ci.yml)
-[![Release](https://github.com/bxrne/logmgr/workflows/Release/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/release.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/bxrne/logmgr)](https://goreportcard.com/report/github.com/bxrne/logmgr)
-[![GoDoc](https://godoc.org/github.com/bxrne/logmgr?status.svg)](https://godoc.org/github.com/bxrne/logmgr)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/release/bxrne/logmgr.svg)](https://github.com/bxrne/logmgr/releases)
+[![CI](https://github.com/bxrne/logmgr/workflows/CI/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/ci.yml) [![Release](https://github.com/bxrne/logmgr/workflows/Release/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/release.yml) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=bxrne_logmgr&metric=coverage)](https://sonarcloud.io/summary/new_code?id=bxrne_logmgr) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=bxrne_logmgr&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=bxrne_logmgr)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=bxrne_logmgr&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=bxrne_logmgr) [![Go Report Card](https://goreportcard.com/badge/github.com/bxrne/logmgr)](https://goreportcard.com/report/github.com/bxrne/logmgr) [![GoDoc](https://godoc.org/github.com/bxrne/logmgr?status.svg)](https://godoc.org/github.com/bxrne/logmgr) [![GitHub release](https://img.shields.io/github/release/bxrne/logmgr.svg)](https://github.com/bxrne/logmgr/releases)
+
+
 
 Ultra-high performance, zero-config logging library for Go that manages everything.
 
