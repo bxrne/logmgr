@@ -30,15 +30,6 @@ Ultra-high performance, zero-config logging library for Go that manages everythi
 - **Buffered I/O**: Large buffers reduce system call overhead
 
 ### Benchmarks
-
-Compared to other popular Go logging libraries:
-
-- **10x faster** than logrus
-- **5x faster** than zap in most scenarios  
-- **Sub-microsecond** log calls with async sinks
-- **Minimal allocations** thanks to object pooling
-- **Scales linearly** with CPU cores
-
 Run benchmarks:
 ```bash
 make benchmark
