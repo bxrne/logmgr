@@ -56,6 +56,8 @@ tidy: ## Tidy dependencies
 clean: ## Clean build artifacts
 	rm -rf bin/ dist/ coverage.out coverage.html
 	find . -name "*.log" -type f -delete
+	find . -name "*_results.txt" -type f -delete
+	find . -name "*.test" -type f -delete
 
 # Development tools
 install-tools: ## Install development tools
