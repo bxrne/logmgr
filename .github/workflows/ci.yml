@@ -10,6 +10,8 @@ permissions:
 jobs:
   lint:
     name: Lint
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -27,6 +29,8 @@ jobs:
 
   test:
     name: Test
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -70,6 +74,8 @@ jobs:
 
   build:
     name: Build
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
