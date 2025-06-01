@@ -8,6 +8,10 @@
 
 Ultra-high performance, zero-config logging library for Go that manages everything.
 
+---
+![img](./example.png)
+---
+
 ## Features
 
 - **🚀 Ridiculously Fast**: Lock-free ring buffer, object pooling, batch processing
