@@ -15,6 +15,10 @@ import (
 	"time"
 )
 
+const (
+	windowsOS = "windows"
+)
+
 // TEST: GIVEN different field types WHEN creating LogField with Field function THEN correct LogField structure is returned
 func TestField(t *testing.T) {
 	tests := []struct {
@@ -866,7 +870,16 @@ func TestWorker(t *testing.T) {
 // TEST: GIVEN invalid file path WHEN creating file sink THEN error is returned
 func TestFileSinkErrors(t *testing.T) {
 	// Test creating file sink with invalid directory
-	_, err := NewFileSink("/invalid/path/that/does/not/exist/test.log", 0, 0)
+	var invalidPath string
+	if runtime.GOOS == windowsOS {
+		// On Windows, use an invalid character in filename
+		invalidPath = "C:\\invalid\\path\\<>:\"|?*test.log"
+	} else {
+		// On Unix systems, use a path that requires root permissions
+		invalidPath = "/invalid/path/that/does/not/exist/test.log"
+	}
+
+	_, err := NewFileSink(invalidPath, 0, 0)
 	if err == nil {
 		t.Error("NewFileSink should fail with invalid path")
 	}
@@ -875,7 +888,16 @@ func TestFileSinkErrors(t *testing.T) {
 // TEST: GIVEN invalid file path WHEN creating async file sink THEN error is returned
 func TestAsyncFileSinkErrors(t *testing.T) {
 	// Test creating async file sink with invalid directory
-	_, err := NewAsyncFileSink("/invalid/path/that/does/not/exist/async.log", 0, 0, 10)
+	var invalidPath string
+	if runtime.GOOS == windowsOS {
+		// On Windows, use an invalid character in filename
+		invalidPath = "C:\\invalid\\path\\<>:\"|?*async.log"
+	} else {
+		// On Unix systems, use a path that requires root permissions
+		invalidPath = "/invalid/path/that/does/not/exist/async.log"
+	}
+
+	_, err := NewAsyncFileSink(invalidPath, 0, 0, 10)
 	if err == nil {
 		t.Error("NewAsyncFileSink should fail with invalid path")
 	}
@@ -1364,7 +1386,7 @@ func TestNewDefaultFileSinkPanic(t *testing.T) {
 
 	// Use different invalid paths for different OS
 	var invalidPath string
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == windowsOS {
 		// On Windows, use an invalid drive letter
 		invalidPath = "Z:\\invalid\\path\\test.log"
 	} else {
