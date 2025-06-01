@@ -41,9 +41,6 @@ make benchmark
 go test -bench=. -benchmem
 ```
 
-### Performance Metrics
-
-See [BENCHMARKS.md](BENCHMARKS.md)
 
 ### Local Benchmarking
 
