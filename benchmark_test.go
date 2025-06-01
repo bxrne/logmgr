@@ -30,14 +30,6 @@ func (nw *NullWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// Helper function for benchmark logging to avoid code duplication (unused, kept for reference)
-func createBenchmarkLogFunc(logger *Logger) func(Level, string, ...LogField) {
-	return func(level Level, message string, fields ...LogField) {
-		// This helper is no longer used - all benchmarks use the global API directly
-		// to avoid race conditions with pooled objects
-	}
-}
-
 // BenchmarkLogmgr_Simple tests logmgr simple logging performance
 func BenchmarkLogmgr_Simple(b *testing.B) {
 	// Create dedicated logger for benchmarking to avoid race conditions
@@ -112,7 +104,7 @@ func BenchmarkZap_Simple(b *testing.B) {
 	)
 
 	logger := zap.New(core)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -135,7 +127,7 @@ func BenchmarkZap_Structured(b *testing.B) {
 	)
 
 	logger := zap.New(core)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -244,7 +236,8 @@ func BenchmarkLogmgr_LevelFiltering(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Fast level check - simulates what would happen in the real log function
 		if InfoLevel >= Level(logger.level) {
-			// This should be filtered, so we do nothing
+			// This should be filtered, so we do nothing - this is intentional for benchmarking
+			_ = 0 // Explicit no-op to satisfy linter
 		}
 	}
 }
@@ -263,7 +256,7 @@ func BenchmarkZap_LevelFiltering(b *testing.B) {
 	)
 
 	logger := zap.New(core)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -340,7 +333,7 @@ func BenchmarkZap_Allocations(b *testing.B) {
 	)
 
 	logger := zap.New(core)
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	b.ReportAllocs()
 	b.ResetTimer()
