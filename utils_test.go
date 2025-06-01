@@ -863,11 +863,15 @@ func TestWorker(t *testing.T) {
 	}
 }
 
+func isWindows() bool {
+	return runtime.GOOS == "windows"
+}
+
 // TEST: GIVEN invalid file path WHEN creating file sink THEN error is returned
 func TestFileSinkErrors(t *testing.T) {
 	// Use platform-appropriate invalid path
 	var invalidPath string
-	if runtime.GOOS == "windows" {
+	if isWindows() {
 		// On Windows, use characters that are not allowed in file paths
 		invalidPath = `C:\invalid\path\with<invalid>characters\test.log`
 	} else {
@@ -885,7 +889,7 @@ func TestFileSinkErrors(t *testing.T) {
 func TestAsyncFileSinkErrors(t *testing.T) {
 	// Use platform-appropriate invalid path
 	var invalidPath string
-	if runtime.GOOS == "windows" {
+	if isWindows() {
 		// On Windows, use characters that are not allowed in file paths
 		invalidPath = `C:\invalid\path\with<invalid>characters\async.log`
 	} else {
@@ -1382,7 +1386,7 @@ func TestNewDefaultFileSinkPanic(t *testing.T) {
 
 	// Use platform-appropriate invalid path that will definitely fail
 	var invalidPath string
-	if runtime.GOOS == "windows" {
+	if isWindows() {
 		// On Windows, use characters that are not allowed in file paths
 		invalidPath = `C:\invalid\path\with<invalid>characters\test.log`
 	} else {
