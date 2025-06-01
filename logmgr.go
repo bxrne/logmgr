@@ -565,6 +565,9 @@ func resetGlobalLogger() {
 				default:
 					worker.Stop()
 				}
+			} else {
+				// Worker is nil, decrement the wait group manually
+				globalLogger.wg.Done()
 			}
 		}
 		globalLogger.wg.Wait()
