@@ -1525,7 +1525,7 @@ func TestFileSinkWriteError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() { _ = sink.Close() }()
 
 	// Replace writer with failing writer
 	sink.writer = bufio.NewWriter(&failingWriter{})
