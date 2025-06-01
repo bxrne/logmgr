@@ -1,3 +1,32 @@
+## [1.1.4](https://github.com/bxrne/logmgr/compare/v1.1.3...v1.1.4) (2025-06-01)
+
+
+### Bug Fixes
+
+* Ensure proper resource closure in test case ([5215d8c](https://github.com/bxrne/logmgr/commit/5215d8c9402c3c7ca61eebd1ac81e3a3c03c4937))
+* Handle nil worker in global logger reset ([bfeca2b](https://github.com/bxrne/logmgr/commit/bfeca2bc7a0cccaaba9cee3dbcfea393220eae6c))
+* Prevent double closure of underlying file in AsyncFileSink ([343098a](https://github.com/bxrne/logmgr/commit/343098a169d942645726c0f213aaee21c835d452))
+
+
+### Styles
+
+* Add example image to README and enhance test coverage ([e6c6f80](https://github.com/bxrne/logmgr/commit/e6c6f8055f7d068c83c42bf1c7cd1f2c4c4a98c2))
+
+
+### Miscellaneous Chores
+
+* Remove backup GolangCI configuration file ([0d289de](https://github.com/bxrne/logmgr/commit/0d289de19970a84cea6988d4ab36690e443c47a1))
+* Simplify GolangCI configuration by removing unused presets ([89347a1](https://github.com/bxrne/logmgr/commit/89347a17ab0f351aaa06ae4ff930d7e113448302))
+* Update GolangCI configuration and improve test error handling ([d43f460](https://github.com/bxrne/logmgr/commit/d43f460f295bc48b815aea18a071e77650a382c2))
+
+
+### Continuous Integration
+
+* Refactor CI workflow to streamline steps and update GolangCI lint action ([b1125db](https://github.com/bxrne/logmgr/commit/b1125db12a0f8514f92a3ddb6af3e65b010be0c9))
+* Remove unnecessary permissions section from CI workflow ([11ed906](https://github.com/bxrne/logmgr/commit/11ed90674d908befc6213885bc93e837b1f22089))
+* Update CI workflow to install dependencies and run GolangCI lint ([f9900a0](https://github.com/bxrne/logmgr/commit/f9900a06c39ea95c661d1ddb66c51eb5f47ddaf5))
+* Update GolangCI lint installation to use the latest version ([54e644c](https://github.com/bxrne/logmgr/commit/54e644c36777f6c41ce3a1da73514ee726a871f5))
+
 ## [1.1.3](https://github.com/bxrne/logmgr/compare/v1.1.2...v1.1.3) (2025-06-01)
 
 
