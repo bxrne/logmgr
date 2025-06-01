@@ -1,3 +1,16 @@
+## [1.1.1](https://github.com/bxrne/logmgr/compare/v1.1.0...v1.1.1) (2025-06-01)
+
+
+### Code Refactoring
+
+* optimize entry writing in sinks by pre-allocating batch buffers ([ef7a470](https://github.com/bxrne/logmgr/commit/ef7a470636a282859b2d0e569d4770d56f467ad2))
+
+
+### Continuous Integration
+
+* Create codeql.yml ([34694fc](https://github.com/bxrne/logmgr/commit/34694fc4f314a6a69c72b9e8707a1c0c83caad00))
+* update golangci-lint version format in CI workflow ([3481ac7](https://github.com/bxrne/logmgr/commit/3481ac7e0731145ff2a76454287a2d42e0400617))
+
 ## [1.1.0](https://github.com/bxrne/logmgr/compare/v1.0.2...v1.1.0) (2025-06-01)
 
 
