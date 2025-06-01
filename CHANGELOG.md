@@ -1,3 +1,38 @@
+## [1.1.5](https://github.com/bxrne/logmgr/compare/v1.1.4...v1.1.5) (2025-06-01)
+
+
+### Bug Fixes
+
+* Improve error handling and closure logic in file sinks ([e8cb78e](https://github.com/bxrne/logmgr/commit/e8cb78e23b00f8753591524a78e41636967f9254))
+
+
+### Code Refactoring
+
+* Clean up benchmark tests by removing unused helper function and improving logger sync handling ([48aa24e](https://github.com/bxrne/logmgr/commit/48aa24ed966c71e12b2e95e26d68647c6ccea429))
+* Refactor benchmark tests to eliminate global logger usage ([9702a15](https://github.com/bxrne/logmgr/commit/9702a15e9ee4cb3cb3796c2288dd20cee49e2dbe))
+
+
+### Documentation
+
+* Add comprehensive benchmarks and design philosophy for logmgr ([cbb0848](https://github.com/bxrne/logmgr/commit/cbb08483c45830e72100403a72c4947f95702806))
+* Remove performance metrics section from README ([0859a7a](https://github.com/bxrne/logmgr/commit/0859a7a0a5d8fa3bf47442e644223aa73aa54254))
+
+
+### Styles
+
+* remove benchmark ([4099c35](https://github.com/bxrne/logmgr/commit/4099c350054ea786dea6baec24be719910a655b5))
+
+
+### Tests
+
+* Enhance file sink tests with OS-specific invalid paths and ensure proper resource closure ([38cfe66](https://github.com/bxrne/logmgr/commit/38cfe66afd88e8ffa1f70e0dd260932ce1487f84))
+* Update file sink tests to use OS-specific invalid paths for improved reliability ([3a7ab24](https://github.com/bxrne/logmgr/commit/3a7ab24c446359f88e3099f02caccc73b9161f20))
+
+
+### Continuous Integration
+
+* Update CI workflow to run tests based on OS type ([91657d6](https://github.com/bxrne/logmgr/commit/91657d693a075ec2412baf9e201e9d6a20fdae3f))
+
 ## [1.1.4](https://github.com/bxrne/logmgr/compare/v1.1.3...v1.1.4) (2025-06-01)
 
 
