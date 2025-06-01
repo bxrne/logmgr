@@ -390,8 +390,8 @@ func (afs *AsyncFileSink) Close() error {
 	// Check if already closed
 	select {
 	case <-afs.done:
-		// Already closed
-		return afs.FileSink.Close()
+		// Already closed, don't close the underlying file again
+		return nil
 	default:
 		close(afs.done)
 	}
