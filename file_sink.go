@@ -193,6 +193,11 @@ func (fs *FileSink) Write(entries []*Entry) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
+	// Check if sink has been closed
+	if fs.writer == nil || fs.file == nil {
+		return fmt.Errorf("cannot write to closed file sink")
+	}
+
 	// Check if rotation is needed
 	if fs.shouldRotate() {
 		if err := fs.rotate(); err != nil {
@@ -235,6 +240,7 @@ func (fs *FileSink) Write(entries []*Entry) error {
 // Close flushes any remaining buffered data and closes the file sink.
 // This method should be called during application shutdown to ensure all
 // log entries are written and the file is properly closed.
+// It's safe to call Close multiple times.
 //
 // Example:
 //
@@ -243,17 +249,23 @@ func (fs *FileSink) Close() error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
+	var err error
+
 	if fs.writer != nil {
-		if err := fs.writer.Flush(); err != nil {
-			return fmt.Errorf("failed to flush writer during close: %w", err)
+		if flushErr := fs.writer.Flush(); flushErr != nil {
+			err = fmt.Errorf("failed to flush writer during close: %w", flushErr)
 		}
+		fs.writer = nil
 	}
 
 	if fs.file != nil {
-		return fs.file.Close()
+		if closeErr := fs.file.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+		fs.file = nil
 	}
 
-	return nil
+	return err
 }
 
 // AsyncFileSink is a high-performance asynchronous file sink that writes log entries
@@ -279,6 +291,8 @@ type AsyncFileSink struct {
 	buffer    chan []*Entry  // Channel buffer for async writes
 	done      chan struct{}  // Shutdown signal
 	wg        sync.WaitGroup // Wait group for background goroutine
+	closed    bool           // Track if sink has been closed
+	mu        sync.Mutex     // Protect closed flag
 }
 
 // NewAsyncFileSink creates a new asynchronous file sink with the specified parameters.
@@ -364,6 +378,14 @@ func (afs *AsyncFileSink) writerLoop() {
 //
 // This method is safe for concurrent use.
 func (afs *AsyncFileSink) Write(entries []*Entry) error {
+	afs.mu.Lock()
+	closed := afs.closed
+	afs.mu.Unlock()
+
+	if closed {
+		return fmt.Errorf("cannot write to closed async file sink")
+	}
+
 	// Make a copy of entries since they might be reused
 	entriesCopy := make([]*Entry, len(entries))
 	copy(entriesCopy, entries)
@@ -381,21 +403,22 @@ func (afs *AsyncFileSink) Write(entries []*Entry) error {
 // writer and ensuring all buffered entries are written to disk.
 //
 // This method will block until all pending writes are completed, ensuring
-// no log entries are lost during shutdown.
+// no log entries are lost during shutdown. It's safe to call Close multiple times.
 //
 // Example:
 //
 //	defer asyncSink.Close()
 func (afs *AsyncFileSink) Close() error {
-	// Check if already closed
-	select {
-	case <-afs.done:
-		// Already closed, don't close the underlying file again
-		return nil
-	default:
-		close(afs.done)
-	}
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
 
+	// Check if already closed
+	if afs.closed {
+		return nil
+	}
+	afs.closed = true
+
+	close(afs.done)
 	afs.wg.Wait()
 	return afs.FileSink.Close()
 }
