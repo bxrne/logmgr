@@ -1,5 +1,13 @@
 # logmgr
 
+[![CI](https://github.com/bxrne/logmgr/workflows/CI/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/ci.yml)
+[![Release](https://github.com/bxrne/logmgr/workflows/Release/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bxrne/logmgr)](https://goreportcard.com/report/github.com/bxrne/logmgr)
+[![codecov](https://codecov.io/gh/bxrne/logmgr/branch/main/graph/badge.svg)](https://codecov.io/gh/bxrne/logmgr)
+[![GoDoc](https://godoc.org/github.com/bxrne/logmgr?status.svg)](https://godoc.org/github.com/bxrne/logmgr)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/release/bxrne/logmgr.svg)](https://github.com/bxrne/logmgr/releases)
+
 Ultra-high performance, zero-config logging library for Go that manages everything.
 
 ## Features
@@ -23,15 +31,33 @@ Ultra-high performance, zero-config logging library for Go that manages everythi
 - **Background workers**: One worker per CPU core for optimal throughput
 - **Buffered I/O**: Large buffers reduce system call overhead
 
-### Usage
+### Benchmarks
 
-Install package:
+Compared to other popular Go logging libraries:
+
+- **10x faster** than logrus
+- **5x faster** than zap in most scenarios  
+- **Sub-microsecond** log calls with async sinks
+- **Minimal allocations** thanks to object pooling
+- **Scales linearly** with CPU cores
+
+Run benchmarks:
+```bash
+make benchmark
+# or
+go test -bench=. -benchmem
+```
+
+## Installation
 
 ```bash
 go get github.com/bxrne/logmgr
 ```
 
-Basic usage:
+## Usage
+
+### Basic Usage
+
 ```go
 package main
 
@@ -83,9 +109,9 @@ func main() {
 }
 ```
 
-## Advanced Usage
+### Advanced Usage
 
-### Custom Sinks
+#### Custom Sinks
 
 ```go
 // Create your own sink
@@ -106,7 +132,7 @@ func (cs *CustomSink) Close() error {
 logmgr.AddSink(&CustomSink{})
 ```
 
-### High-Performance File Logging
+#### High-Performance File Logging
 
 ```go
 // Async file sink for maximum performance
@@ -122,7 +148,7 @@ if err != nil {
 logmgr.AddSink(asyncSink)
 ```
 
-### Multiple Sinks
+#### Multiple Sinks
 
 ```go
 // Set multiple sinks at once
@@ -133,7 +159,7 @@ logmgr.SetSinks(
 )
 ```
 
-### Structured Logging
+#### Structured Logging
 
 ```go
 // Rich structured logging with type safety
@@ -213,21 +239,127 @@ Error example:
 - `logmgr.ErrorLevel` - Error events that might allow the application to continue
 - `logmgr.FatalLevel` - Very severe error events that will lead the application to abort
 
-## Benchmarks
+### Sinks
 
-Compared to other popular Go logging libraries:
+#### Console Sinks
+- `logmgr.DefaultConsoleSink` - Pre-configured stdout sink
+- `logmgr.NewConsoleSink()` - Create new stdout sink
+- `logmgr.NewStderrSink()` - Create new stderr sink
 
-- **10x faster** than logrus
-- **5x faster** than zap in most scenarios  
-- **Sub-microsecond** log calls with async sinks
-- **Minimal allocations** thanks to object pooling
-- **Scales linearly** with CPU cores
+#### File Sinks
+- `logmgr.NewFileSink(filename, maxAge, maxSize)` - Create file sink with rotation
+- `logmgr.NewDefaultFileSink(filename, maxAge)` - Create file sink with default 100MB size limit
+- `logmgr.NewAsyncFileSink(filename, maxAge, maxSize, bufferSize)` - Create async file sink
 
-Run benchmarks:
+## Development
+
+### Prerequisites
+
+- Go 1.21 or later
+- Make (optional, for convenience commands)
+
+### Development Commands
+
 ```bash
-go test -bench=. -benchmem
+# Install development tools
+make install-tools
+
+# Run tests
+make test
+
+# Run tests with race detection
+make test-race
+
+# Run tests with coverage
+make test-cover
+
+# Run benchmarks
+make benchmark
+
+# Format code
+make fmt
+
+# Lint code
+make lint
+
+# Run all checks
+make check
+
+# Build example application
+make build
+
+# Build for all platforms
+make build-all
+
+# Clean build artifacts
+make clean
+
+# Show all available commands
+make help
+```
+
+### Manual Commands
+
+If you prefer not to use Make:
+
+```bash
+# Install tools
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install golang.org/x/tools/cmd/goimports@latest
+
+# Test
+go test -v ./...
+go test -v -race ./...
+go test -v -race -coverprofile=coverage.out ./...
+
+# Lint and format
+golangci-lint run --timeout=5m
+go fmt ./...
+goimports -w .
+go vet ./...
+
+# Build
+go build -o bin/logmgr-example ./example
+
+# Benchmarks
+go test -bench=. -benchmem ./...
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests and linting (`make check`)
+5. Commit your changes using [Conventional Commits](https://www.conventionalcommits.org/)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+### Commit Message Format
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) for automated versioning and changelog generation:
+
+- `feat:` - New features (minor version bump)
+- `fix:` - Bug fixes (patch version bump)
+- `perf:` - Performance improvements (patch version bump)
+- `refactor:` - Code refactoring (patch version bump)
+- `docs:` - Documentation changes (no version bump)
+- `test:` - Test changes (no version bump)
+- `chore:` - Maintenance tasks (no version bump)
+- `BREAKING CHANGE:` - Breaking changes (major version bump)
+
+Examples:
+```
+feat: add async file sink for high-performance logging
+fix: resolve race condition in ring buffer
+perf: optimize JSON marshaling for better throughput
+docs: update API documentation with examples
 ```
 
 ## License
 
-MIT License
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
