@@ -490,7 +490,11 @@ func TestAsyncFileSink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAsyncFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			t.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	entries := []*Entry{
 		{
@@ -534,7 +538,11 @@ func TestAsyncFileSinkBufferFull(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewAsyncFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			t.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	// Fill the buffer and test fallback to synchronous write
 	entries := []*Entry{
@@ -551,7 +559,9 @@ func TestAsyncFileSinkBufferFull(t *testing.T) {
 	}
 
 	time.Sleep(200 * time.Millisecond)
-	sink.Close()
+	if err := sink.Close(); err != nil {
+		t.Errorf("AsyncFileSink.Close() error = %v", err)
+	}
 
 	// Verify all messages were written
 	content, err := os.ReadFile(filename)
@@ -570,7 +580,11 @@ func TestNewDefaultFileSink(t *testing.T) {
 	filename := filepath.Join(tmpDir, "default.log")
 
 	sink := NewDefaultFileSink(filename, time.Hour)
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			t.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	entries := []*Entry{
 		{
@@ -586,7 +600,9 @@ func TestNewDefaultFileSink(t *testing.T) {
 		t.Errorf("NewDefaultFileSink.Write() error = %v", err)
 	}
 
-	sink.Close()
+	if err := sink.Close(); err != nil {
+		t.Errorf("NewDefaultFileSink.Close() error = %v", err)
+	}
 
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -607,7 +623,11 @@ func TestFileSinkTimeRotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			t.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	// Write first entry
 	entry1 := &Entry{
@@ -636,7 +656,9 @@ func TestFileSinkTimeRotation(t *testing.T) {
 		t.Errorf("FileSink.Write() error = %v", err)
 	}
 
-	sink.Close()
+	if err := sink.Close(); err != nil {
+		t.Errorf("FileSink.Close() error = %v", err)
+	}
 
 	// Check that rotation occurred
 	files, err := filepath.Glob(filepath.Join(tmpDir, "time_rotate_*.log"))
@@ -854,7 +876,9 @@ func TestFileSinkWriteAfterClose(t *testing.T) {
 	}
 
 	// Close the sink
-	sink.Close()
+	if err := sink.Close(); err != nil {
+		t.Fatalf("Failed to close sink: %v", err)
+	}
 
 	// Try to write after close (should handle gracefully)
 	entries := []*Entry{
