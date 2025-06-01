@@ -318,27 +318,47 @@ func SetSinks(sinks ...Sink) {
 // log is the internal logging function
 func log(level Level, message string, fields ...LogField) {
 	logger := getLogger()
+	if logger == nil {
+		return // Safety check
+	}
 
 	// Fast level check
 	if level < Level(atomic.LoadInt32(&logger.level)) {
 		return
 	}
 
-	// Get entry from pool
-	entry := logger.entryPool.Get().(*Entry)
+	// Safety check for buffer
+	if logger.buffer == nil {
+		return
+	}
+
+	// Get entry from pool with nil safety
+	var entry *Entry
+	if poolEntry := logger.entryPool.Get(); poolEntry != nil {
+		if e, ok := poolEntry.(*Entry); ok && e != nil {
+			entry = e
+		}
+	}
+
+	// Always create new entry if we don't have a valid one
+	if entry == nil {
+		entry = &Entry{
+			Fields: make(map[string]interface{}, 8),
+			buffer: make([]byte, 0, 512),
+		}
+	}
+
 	entry.Level = level
 	entry.Timestamp = time.Now()
 	entry.Message = message
 
-	// Optimized field clearing - for small maps, clear individually is faster
-	if len(entry.Fields) <= 8 {
-		for k := range entry.Fields {
-			delete(entry.Fields, k)
-		}
-	} else {
-		// For larger maps, create new map
+	// Ensure fields map is initialized
+	if entry.Fields == nil {
 		entry.Fields = make(map[string]interface{}, 8)
 	}
+
+	// Always create a fresh map to avoid race conditions
+	entry.Fields = make(map[string]interface{}, len(fields))
 
 	// Populate fields
 	for _, field := range fields {
