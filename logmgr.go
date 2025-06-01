@@ -202,25 +202,25 @@ func (w *Worker) flush() {
 		return
 	}
 
-	entries := w.batch[:count]
-
-	// Take a snapshot of sinks once to reduce lock contention
+	// Take a snapshot of sinks to reduce lock contention
 	w.logger.sinksMu.RLock()
 	sinks := make([]Sink, len(w.logger.sinks))
 	copy(sinks, w.logger.sinks)
 	w.logger.sinksMu.RUnlock()
 
-	// Write to all sinks
+	// Process entries with each sink
 	for _, sink := range sinks {
-		if err := sink.Write(entries); err != nil {
-			// TODO: Handle sink errors (maybe to stderr?)
-			continue
+		if err := sink.Write(w.batch[:count]); err != nil {
+			// In a production system, you might want to handle this error
+			// For now, we continue to other sinks
+			_ = err
 		}
 	}
 
 	// Return entries to pool
-	for _, entry := range entries {
-		w.logger.entryPool.Put(entry)
+	for i := 0; i < count; i++ {
+		w.logger.entryPool.Put(w.batch[i])
+		w.batch[i] = nil // Clear reference
 	}
 }
 
@@ -239,32 +239,31 @@ func getLogger() *Logger {
 	once.Do(func() {
 		globalLogger = &Logger{
 			level:    int32(InfoLevel),
-			buffer:   NewRingBuffer(8192), // 8K entries buffer
+			buffer:   NewRingBuffer(8192),
 			shutdown: make(chan struct{}),
 		}
 
-		// Initialize object pools
+		// Initialize object pools with optimized allocations
 		globalLogger.entryPool = sync.Pool{
 			New: func() interface{} {
 				return &Entry{
 					Fields: make(map[string]interface{}, 8), // Pre-size for common case
-					buffer: make([]byte, 0, 512),            // Pre-allocate JSON buffer
+					buffer: make([]byte, 0, 512),            // Pre-allocate 512 bytes
 				}
 			},
 		}
 
 		globalLogger.bufferPool = sync.Pool{
 			New: func() interface{} {
-				return make([]byte, 0, 1024) // 1KB initial capacity
+				return make([]byte, 0, 1024)
 			},
 		}
 
 		// Start workers (one per CPU core)
 		numWorkers := runtime.NumCPU()
 		globalLogger.workers = make([]*Worker, numWorkers)
-
 		for i := 0; i < numWorkers; i++ {
-			worker := NewWorker(i, globalLogger, 256) // 256 entries per batch
+			worker := NewWorker(i, globalLogger, 256)
 			globalLogger.workers[i] = worker
 			globalLogger.wg.Add(1)
 			go worker.Run()
@@ -331,17 +330,14 @@ func log(level Level, message string, fields ...LogField) {
 	entry.Timestamp = time.Now()
 	entry.Message = message
 
-	// Clear fields map efficiently
-	if len(entry.Fields) > 0 {
-		// For small maps, clearing individually is faster than creating new map
-		if len(entry.Fields) <= 8 {
-			for k := range entry.Fields {
-				delete(entry.Fields, k)
-			}
-		} else {
-			// For larger maps, create new map
-			entry.Fields = make(map[string]interface{}, 8)
+	// Optimized field clearing - for small maps, clear individually is faster
+	if len(entry.Fields) <= 8 {
+		for k := range entry.Fields {
+			delete(entry.Fields, k)
 		}
+	} else {
+		// For larger maps, create new map
+		entry.Fields = make(map[string]interface{}, 8)
 	}
 
 	// Populate fields
@@ -539,6 +535,12 @@ func appendJSONValue(buf []byte, value interface{}) []byte {
 		return append(buf, "false"...)
 	case nil:
 		return append(buf, "null"...)
+	case time.Time:
+		// Fast path for time.Time
+		buf = append(buf, '"')
+		buf = append(buf, v.Format(time.RFC3339Nano)...)
+		buf = append(buf, '"')
+		return buf
 	default:
 		// Fallback to json.Marshal for complex types
 		valueBytes, err := json.Marshal(value)

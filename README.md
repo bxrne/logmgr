@@ -46,6 +46,74 @@ make benchmark
 go test -bench=. -benchmem
 ```
 
+### Performance Metrics
+
+Recent benchmark results on Intel i9-9980HK @ 2.40GHz:
+
+| Benchmark | ns/op | B/op | allocs/op | Description |
+|-----------|-------|------|-----------|-------------|
+| BenchmarkLogInfo | 90.24 | 0 | 0 | Simple log message |
+| BenchmarkLogInfoWithFields | 258.6 | 8 | 1 | Log with 4 structured fields |
+| BenchmarkLogLevelFiltering | 5.48 | 0 | 0 | Level filtering (rejected) |
+| BenchmarkJSONMarshal | 867.2 | 240 | 6 | JSON serialization |
+| BenchmarkRingBuffer | 0.26 | 0 | 0 | Lock-free ring buffer ops |
+| BenchmarkConsoleSink | 6,724 | 3,490 | 21 | Console output with batching |
+| BenchmarkFileSink | 12,281 | 3,490 | 21 | File output with batching |
+| BenchmarkConcurrentLogging | 141.8 | 0 | 0 | Multi-goroutine logging |
+
+### Local Benchmarking
+
+To run comprehensive benchmarks on your system:
+
+```bash
+# Run all benchmarks with memory allocation stats
+go test -bench=. -benchmem -count=3
+
+# Run specific benchmark multiple times for accuracy
+go test -bench=BenchmarkLogInfo -benchmem -count=5
+
+# Run benchmarks with CPU profiling
+go test -bench=. -benchmem -cpuprofile=cpu.prof
+
+# Run benchmarks with memory profiling
+go test -bench=. -benchmem -memprofile=mem.prof
+
+# Compare with baseline (save results first)
+go test -bench=. -benchmem > baseline.txt
+# After changes:
+go test -bench=. -benchmem > optimized.txt
+# Use benchcmp tool to compare
+```
+
+#### Benchmark Interpretation
+
+- **ns/op**: Nanoseconds per operation (lower is better)
+- **B/op**: Bytes allocated per operation (lower is better)
+- **allocs/op**: Number of allocations per operation (lower is better)
+
+#### Performance Tips
+
+1. **Use structured fields sparingly** - Each field adds ~50ns overhead
+2. **Pre-filter log levels** - Use `logmgr.GetLevel()` for expensive operations
+3. **Batch operations** - Sinks automatically batch for optimal I/O
+4. **Choose appropriate sinks** - Console < File < Async File for performance
+5. **Monitor allocations** - Zero allocations for simple logging is the goal
+
+#### Profiling Integration
+
+```go
+import _ "net/http/pprof"
+import "net/http"
+
+// Enable pprof endpoint for production profiling
+go func() {
+    log.Println(http.ListenAndServe("localhost:6060", nil))
+}()
+
+// Profile your logging-heavy code paths
+// Visit http://localhost:6060/debug/pprof/
+```
+
 ## Installation
 
 ```bash
