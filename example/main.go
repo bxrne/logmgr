@@ -22,8 +22,6 @@ func main() {
 	// Add file sink to the logger
 	logmgr.AddSink(fileSink)
 
-	// Log messages with optional structured fields
-
 	// Log a debug message
 	logmgr.Debug("This is a debug message")
 

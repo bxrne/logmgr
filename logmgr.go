@@ -222,7 +222,12 @@ func (w *Worker) flush() {
 
 // Stop stops the worker
 func (w *Worker) Stop() {
-	close(w.shutdown)
+	select {
+	case <-w.shutdown:
+		// Already stopped
+	default:
+		close(w.shutdown)
+	}
 }
 
 // getLogger returns the global logger instance (singleton)
@@ -456,4 +461,34 @@ func (e *Entry) MarshalJSON() ([]byte, error) {
 
 	buf = append(buf, '}')
 	return buf, nil
+}
+
+// resetGlobalLogger resets the global logger state for testing
+// This function should only be used in tests
+func resetGlobalLogger() {
+	if globalLogger != nil {
+		// Stop existing workers if any
+		for _, worker := range globalLogger.workers {
+			if worker != nil {
+				// Check if worker is still running before stopping
+				select {
+				case <-worker.shutdown:
+					// Already stopped
+				default:
+					worker.Stop()
+				}
+			}
+		}
+		globalLogger.wg.Wait()
+
+		// Close existing sinks
+		globalLogger.sinksMu.RLock()
+		for _, sink := range globalLogger.sinks {
+			sink.Close()
+		}
+		globalLogger.sinksMu.RUnlock()
+	}
+
+	once = sync.Once{}
+	globalLogger = nil
 }

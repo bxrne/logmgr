@@ -356,7 +356,15 @@ func (afs *AsyncFileSink) Write(entries []*Entry) error {
 //
 //	defer asyncSink.Close()
 func (afs *AsyncFileSink) Close() error {
-	close(afs.done)
+	// Check if already closed
+	select {
+	case <-afs.done:
+		// Already closed
+		return afs.FileSink.Close()
+	default:
+		close(afs.done)
+	}
+
 	afs.wg.Wait()
 	return afs.FileSink.Close()
 }
