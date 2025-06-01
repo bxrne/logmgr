@@ -47,6 +47,13 @@ func (cs *ConsoleSink) Write(entries []*Entry) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
+	// Pre-allocate buffer for the entire batch to reduce system calls
+	var batchBuffer []byte
+	if len(entries) > 0 {
+		// Estimate buffer size: ~200 bytes per entry average
+		batchBuffer = make([]byte, 0, len(entries)*200)
+	}
+
 	for _, entry := range entries {
 		// Marshal to JSON
 		data, err := entry.MarshalJSON()
@@ -54,11 +61,14 @@ func (cs *ConsoleSink) Write(entries []*Entry) error {
 			continue // Skip malformed entries
 		}
 
-		// Write JSON + newline
-		if _, err := cs.writer.Write(data); err != nil {
-			return err
-		}
-		if err := cs.writer.WriteByte('\n'); err != nil {
+		// Append to batch buffer with newline
+		batchBuffer = append(batchBuffer, data...)
+		batchBuffer = append(batchBuffer, '\n')
+	}
+
+	// Write the entire batch in one system call
+	if len(batchBuffer) > 0 {
+		if _, err := cs.writer.Write(batchBuffer); err != nil {
 			return err
 		}
 	}
@@ -124,16 +134,27 @@ func (ss *StderrSink) Write(entries []*Entry) error {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
+	// Pre-allocate buffer for the entire batch to reduce system calls
+	var batchBuffer []byte
+	if len(entries) > 0 {
+		// Estimate buffer size: ~200 bytes per entry average
+		batchBuffer = make([]byte, 0, len(entries)*200)
+	}
+
 	for _, entry := range entries {
 		data, err := entry.MarshalJSON()
 		if err != nil {
 			continue
 		}
 
-		if _, err := ss.writer.Write(data); err != nil {
-			return err
-		}
-		if err := ss.writer.WriteByte('\n'); err != nil {
+		// Append to batch buffer with newline
+		batchBuffer = append(batchBuffer, data...)
+		batchBuffer = append(batchBuffer, '\n')
+	}
+
+	// Write the entire batch in one system call
+	if len(batchBuffer) > 0 {
+		if _, err := ss.writer.Write(batchBuffer); err != nil {
 			return err
 		}
 	}

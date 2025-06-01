@@ -200,22 +200,32 @@ func (fs *FileSink) Write(entries []*Entry) error {
 		}
 	}
 
-	// Write entries
+	// Pre-allocate buffer for the entire batch to reduce system calls
+	var batchBuffer []byte
+	if len(entries) > 0 {
+		// Estimate buffer size: ~200 bytes per entry average
+		batchBuffer = make([]byte, 0, len(entries)*200)
+	}
+
+	// Write entries to batch buffer
 	for _, entry := range entries {
 		data, err := entry.MarshalJSON()
 		if err != nil {
 			continue // Skip malformed entries
 		}
 
-		// Write JSON + newline
-		n, err := fs.writer.Write(data)
+		// Append to batch buffer with newline
+		batchBuffer = append(batchBuffer, data...)
+		batchBuffer = append(batchBuffer, '\n')
+	}
+
+	// Write the entire batch in one system call
+	if len(batchBuffer) > 0 {
+		n, err := fs.writer.Write(batchBuffer)
 		if err != nil {
 			return err
 		}
-		if err := fs.writer.WriteByte('\n'); err != nil {
-			return err
-		}
-		fs.currentSize += int64(n + 1)
+		fs.currentSize += int64(n)
 	}
 
 	// Flush the buffer

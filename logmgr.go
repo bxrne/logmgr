@@ -2,6 +2,7 @@ package logmgr
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -36,6 +37,7 @@ type Entry struct {
 	Message   string                 `json:"message"`
 	Fields    map[string]interface{} `json:"-"` // Don't marshal this directly
 	caller    string                 // Internal field for caller info
+	buffer    []byte                 // Reusable buffer for JSON marshalling
 }
 
 // LogField represents a structured logging field
@@ -202,11 +204,13 @@ func (w *Worker) flush() {
 
 	entries := w.batch[:count]
 
-	// Write to all sinks
+	// Take a snapshot of sinks once to reduce lock contention
 	w.logger.sinksMu.RLock()
-	sinks := w.logger.sinks
+	sinks := make([]Sink, len(w.logger.sinks))
+	copy(sinks, w.logger.sinks)
 	w.logger.sinksMu.RUnlock()
 
+	// Write to all sinks
 	for _, sink := range sinks {
 		if err := sink.Write(entries); err != nil {
 			// TODO: Handle sink errors (maybe to stderr?)
@@ -243,7 +247,8 @@ func getLogger() *Logger {
 		globalLogger.entryPool = sync.Pool{
 			New: func() interface{} {
 				return &Entry{
-					Fields: make(map[string]interface{}),
+					Fields: make(map[string]interface{}, 8), // Pre-size for common case
+					buffer: make([]byte, 0, 512),            // Pre-allocate JSON buffer
 				}
 			},
 		}
@@ -326,10 +331,20 @@ func log(level Level, message string, fields ...LogField) {
 	entry.Timestamp = time.Now()
 	entry.Message = message
 
-	// Clear and populate fields
-	for k := range entry.Fields {
-		delete(entry.Fields, k)
+	// Clear fields map efficiently
+	if len(entry.Fields) > 0 {
+		// For small maps, clearing individually is faster than creating new map
+		if len(entry.Fields) <= 8 {
+			for k := range entry.Fields {
+				delete(entry.Fields, k)
+			}
+		} else {
+			// For larger maps, create new map
+			entry.Fields = make(map[string]interface{}, 8)
+		}
 	}
+
+	// Populate fields
 	for _, field := range fields {
 		entry.Fields[field.Key] = field.Value
 	}
@@ -434,37 +449,104 @@ func Shutdown() {
 
 // MarshalJSON implements custom JSON marshaling for Entry with flattened fields
 func (e *Entry) MarshalJSON() ([]byte, error) {
-	// Pre-allocate buffer
-	buf := make([]byte, 0, 256)
-	buf = append(buf, '{')
+	// Reset buffer, keeping capacity
+	e.buffer = e.buffer[:0]
+	e.buffer = append(e.buffer, '{')
 
 	// Level (always first)
-	buf = append(buf, `"level":"`...)
-	buf = append(buf, e.Level.String()...)
-	buf = append(buf, '"')
+	e.buffer = append(e.buffer, `"level":"`...)
+	e.buffer = append(e.buffer, e.Level.String()...)
+	e.buffer = append(e.buffer, '"')
 
-	// Timestamp
-	buf = append(buf, `,"timestamp":"`...)
-	buf = append(buf, e.Timestamp.Format(time.RFC3339Nano)...)
-	buf = append(buf, '"')
+	// Timestamp - keep RFC3339Nano for precision and compatibility
+	e.buffer = append(e.buffer, `,"timestamp":"`...)
+	e.buffer = append(e.buffer, e.Timestamp.Format(time.RFC3339Nano)...)
+	e.buffer = append(e.buffer, '"')
 
-	// Message
-	buf = append(buf, `,"message":`...)
-	msgBytes, _ := json.Marshal(e.Message)
-	buf = append(buf, msgBytes...)
+	// Message - fast path for simple strings, fallback to json.Marshal for complex cases
+	e.buffer = append(e.buffer, `,"message":`...)
+	e.buffer = appendJSONString(e.buffer, e.Message)
 
 	// Fields (flattened into root object)
 	for key, value := range e.Fields {
-		buf = append(buf, ',')
-		buf = append(buf, '"')
-		buf = append(buf, key...)
-		buf = append(buf, `":`...)
-		valueBytes, _ := json.Marshal(value)
-		buf = append(buf, valueBytes...)
+		e.buffer = append(e.buffer, ',')
+		e.buffer = append(e.buffer, '"')
+		e.buffer = append(e.buffer, key...)
+		e.buffer = append(e.buffer, `":`...)
+		e.buffer = appendJSONValue(e.buffer, value)
 	}
 
-	buf = append(buf, '}')
-	return buf, nil
+	e.buffer = append(e.buffer, '}')
+
+	// Return a copy to avoid buffer reuse issues
+	result := make([]byte, len(e.buffer))
+	copy(result, e.buffer)
+	return result, nil
+}
+
+// appendJSONString appends a JSON-encoded string to the buffer
+func appendJSONString(buf []byte, s string) []byte {
+	buf = append(buf, '"')
+	for _, r := range s {
+		switch r {
+		case '"':
+			buf = append(buf, `\"`...)
+		case '\\':
+			buf = append(buf, `\\`...)
+		case '\n':
+			buf = append(buf, `\n`...)
+		case '\r':
+			buf = append(buf, `\r`...)
+		case '\t':
+			buf = append(buf, `\t`...)
+		default:
+			if r < 32 {
+				buf = append(buf, fmt.Sprintf(`\u%04x`, r)...)
+			} else {
+				buf = append(buf, string(r)...)
+			}
+		}
+	}
+	buf = append(buf, '"')
+	return buf
+}
+
+// appendJSONValue appends a JSON-encoded value to the buffer
+func appendJSONValue(buf []byte, value interface{}) []byte {
+	switch v := value.(type) {
+	case string:
+		return appendJSONString(buf, v)
+	case int:
+		return append(buf, fmt.Sprintf("%d", v)...)
+	case int32:
+		return append(buf, fmt.Sprintf("%d", v)...)
+	case int64:
+		return append(buf, fmt.Sprintf("%d", v)...)
+	case uint:
+		return append(buf, fmt.Sprintf("%d", v)...)
+	case uint32:
+		return append(buf, fmt.Sprintf("%d", v)...)
+	case uint64:
+		return append(buf, fmt.Sprintf("%d", v)...)
+	case float32:
+		return append(buf, fmt.Sprintf("%g", v)...)
+	case float64:
+		return append(buf, fmt.Sprintf("%g", v)...)
+	case bool:
+		if v {
+			return append(buf, "true"...)
+		}
+		return append(buf, "false"...)
+	case nil:
+		return append(buf, "null"...)
+	default:
+		// Fallback to json.Marshal for complex types
+		valueBytes, err := json.Marshal(value)
+		if err != nil {
+			return append(buf, "null"...)
+		}
+		return append(buf, valueBytes...)
+	}
 }
 
 // resetGlobalLogger resets the global logger state for testing
