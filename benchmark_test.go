@@ -3,7 +3,6 @@ package logmgr
 import (
 	stdlog "log"
 	"log/slog"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -66,92 +65,33 @@ func createBenchmarkLogFunc(logger *Logger) func(Level, string, ...LogField) {
 	}
 }
 
-// BenchmarkLogmgr tests logmgr simple logging performance
+// BenchmarkLogmgr_Simple tests logmgr simple logging performance
 func BenchmarkLogmgr_Simple(b *testing.B) {
-	// Create a standalone logger for benchmarking
-	logger := &Logger{
-		level:    int32(InfoLevel),
-		buffer:   NewRingBuffer(8192),
-		shutdown: make(chan struct{}),
-	}
-
-	// Initialize object pools properly
-	logger.entryPool = sync.Pool{
-		New: func() interface{} {
-			return &Entry{
-				Fields: make(map[string]interface{}),
-			}
-		},
-	}
-
-	logger.bufferPool = sync.Pool{
-		New: func() interface{} {
-			return make([]byte, 0, 1024)
-		},
-	}
-
-	// Add null sink to avoid I/O overhead
-	logger.sinks = []Sink{&NullSink{}}
-
-	// Start one worker for processing
-	worker := NewWorker(0, logger, 256)
-	logger.workers = []*Worker{worker}
-	logger.wg.Add(1)
-	go worker.Run()
-
-	// Create a local log function that uses our logger
-	logFunc := createBenchmarkLogFunc(logger)
+	// Use the global API for simplicity
+	SetSinks(&NullSink{})
+	SetLevel(InfoLevel)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			logFunc(InfoLevel, "benchmark message")
+			Info("benchmark message")
 		}
 	})
 
-	// Cleanup
-	worker.Stop()
-	logger.wg.Wait()
+	// Reset global logger after test
+	resetGlobalLogger()
 }
 
 // BenchmarkLogmgr_Structured tests logmgr structured logging performance
 func BenchmarkLogmgr_Structured(b *testing.B) {
-	// Create a standalone logger for benchmarking
-	logger := &Logger{
-		level:    int32(InfoLevel),
-		buffer:   NewRingBuffer(8192),
-		shutdown: make(chan struct{}),
-	}
-
-	// Initialize object pools properly
-	logger.entryPool = sync.Pool{
-		New: func() interface{} {
-			return &Entry{
-				Fields: make(map[string]interface{}),
-			}
-		},
-	}
-
-	logger.bufferPool = sync.Pool{
-		New: func() interface{} {
-			return make([]byte, 0, 1024)
-		},
-	}
-
-	logger.sinks = []Sink{&NullSink{}}
-
-	worker := NewWorker(0, logger, 256)
-	logger.workers = []*Worker{worker}
-	logger.wg.Add(1)
-	go worker.Run()
-
-	// Create a local log function that uses our logger
-	logFunc := createBenchmarkLogFunc(logger)
+	// Use the global API for simplicity
+	SetSinks(&NullSink{})
+	SetLevel(InfoLevel)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			logFunc(InfoLevel, "user action",
+			Info("user action",
 				Field("user_id", 12345),
 				Field("action", "login"),
 				Field("ip", "192.168.1.1"),
@@ -160,9 +100,8 @@ func BenchmarkLogmgr_Structured(b *testing.B) {
 		}
 	})
 
-	// Cleanup
-	worker.Stop()
-	logger.wg.Wait()
+	// Reset global logger after test
+	resetGlobalLogger()
 }
 
 // BenchmarkZap_Simple tests Zap simple logging performance
@@ -298,39 +237,17 @@ func BenchmarkSlog_Structured(b *testing.B) {
 
 // BenchmarkLogmgr_LevelFiltering tests logmgr level filtering performance
 func BenchmarkLogmgr_LevelFiltering(b *testing.B) {
-	// Create a standalone logger for benchmarking
-	logger := &Logger{
-		level:    int32(ErrorLevel), // Only error and above
-		buffer:   NewRingBuffer(8192),
-		shutdown: make(chan struct{}),
-	}
-
-	// Initialize object pools properly
-	logger.entryPool = sync.Pool{
-		New: func() interface{} {
-			return &Entry{
-				Fields: make(map[string]interface{}),
-			}
-		},
-	}
-
-	logger.bufferPool = sync.Pool{
-		New: func() interface{} {
-			return make([]byte, 0, 1024)
-		},
-	}
-
-	logger.sinks = []Sink{&NullSink{}}
-
-	// Create a local log function that uses our logger
-	logFunc := createBenchmarkLogFunc(logger)
+	SetSinks(&NullSink{})
+	SetLevel(ErrorLevel) // Only error and above
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			logFunc(InfoLevel, "this should be filtered") // Below error level
+			Info("this should be filtered") // Below error level
 		}
 	})
+
+	resetGlobalLogger()
 }
 
 // BenchmarkZap_LevelFiltering tests Zap level filtering performance
@@ -388,46 +305,19 @@ func BenchmarkSlog_LevelFiltering(b *testing.B) {
 
 // Memory allocation benchmarks
 func BenchmarkLogmgr_Allocations(b *testing.B) {
-	logger := &Logger{
-		level:    int32(InfoLevel),
-		buffer:   NewRingBuffer(8192),
-		shutdown: make(chan struct{}),
-	}
-
-	logger.entryPool = sync.Pool{
-		New: func() interface{} {
-			return &Entry{
-				Fields: make(map[string]interface{}),
-			}
-		},
-	}
-
-	logger.bufferPool = sync.Pool{
-		New: func() interface{} {
-			return make([]byte, 0, 1024)
-		},
-	}
-
-	logger.sinks = []Sink{&NullSink{}}
-
-	worker := NewWorker(0, logger, 256)
-	logger.workers = []*Worker{worker}
-	logger.wg.Add(1)
-	go worker.Run()
-
-	logFunc := createBenchmarkLogFunc(logger)
+	SetSinks(&NullSink{})
+	SetLevel(InfoLevel)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logFunc(InfoLevel, "benchmark message",
+		Info("benchmark message",
 			Field("user_id", 12345),
 			Field("action", "login"),
 		)
 	}
 
-	worker.Stop()
-	logger.wg.Wait()
+	resetGlobalLogger()
 }
 
 func BenchmarkZap_Allocations(b *testing.B) {
@@ -487,52 +377,18 @@ func BenchmarkSlog_Allocations(b *testing.B) {
 
 // Test concurrent logging performance under contention
 func BenchmarkConcurrentLogging(b *testing.B) {
-	logger := &Logger{
-		level:    int32(InfoLevel),
-		buffer:   NewRingBuffer(8192),
-		shutdown: make(chan struct{}),
-	}
-
-	logger.entryPool = sync.Pool{
-		New: func() interface{} {
-			return &Entry{
-				Fields: make(map[string]interface{}),
-			}
-		},
-	}
-
-	logger.bufferPool = sync.Pool{
-		New: func() interface{} {
-			return make([]byte, 0, 1024)
-		},
-	}
-
-	logger.sinks = []Sink{&NullSink{}}
-
-	// Start multiple workers to handle the load
-	numWorkers := 4
-	for i := 0; i < numWorkers; i++ {
-		worker := NewWorker(i, logger, 256)
-		logger.workers = append(logger.workers, worker)
-		logger.wg.Add(1)
-		go worker.Run()
-	}
-
-	logFunc := createBenchmarkLogFunc(logger)
+	SetSinks(&NullSink{})
+	SetLevel(InfoLevel)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			logFunc(InfoLevel, "concurrent message",
+			Info("concurrent message",
 				Field("goroutine", "worker"),
 				Field("timestamp", time.Now().Unix()),
 			)
 		}
 	})
 
-	// Cleanup
-	for _, worker := range logger.workers {
-		worker.Stop()
-	}
-	logger.wg.Wait()
+	resetGlobalLogger()
 }
