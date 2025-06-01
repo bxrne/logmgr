@@ -1,3 +1,10 @@
+## [1.1.0](https://github.com/bxrne/logmgr/compare/v1.0.2...v1.1.0) (2025-06-01)
+
+
+### Features
+
+* add SonarCloud configuration and project properties for Go project analysis ([41edaf1](https://github.com/bxrne/logmgr/commit/41edaf10679a362d04bfc70e4d3c8b804da0c961))
+
 ## [1.0.2](https://github.com/bxrne/logmgr/compare/v1.0.1...v1.0.2) (2025-06-01)
 
 
