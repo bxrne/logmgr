@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -864,8 +865,17 @@ func TestWorker(t *testing.T) {
 
 // TEST: GIVEN invalid file path WHEN creating file sink THEN error is returned
 func TestFileSinkErrors(t *testing.T) {
-	// Test creating file sink with invalid directory
-	_, err := NewFileSink("/invalid/path/that/does/not/exist/test.log", 0, 0)
+	// Use platform-appropriate invalid path
+	var invalidPath string
+	if runtime.GOOS == "windows" {
+		// On Windows, use characters that are not allowed in file paths
+		invalidPath = `C:\invalid\path\with<invalid>characters\test.log`
+	} else {
+		// On Unix-like systems, use a path that requires root permissions
+		invalidPath = "/proc/invalid/path/that/does/not/exist/test.log"
+	}
+
+	_, err := NewFileSink(invalidPath, 0, 0)
 	if err == nil {
 		t.Error("NewFileSink should fail with invalid path")
 	}
@@ -873,8 +883,17 @@ func TestFileSinkErrors(t *testing.T) {
 
 // TEST: GIVEN invalid file path WHEN creating async file sink THEN error is returned
 func TestAsyncFileSinkErrors(t *testing.T) {
-	// Test creating async file sink with invalid directory
-	_, err := NewAsyncFileSink("/invalid/path/that/does/not/exist/async.log", 0, 0, 10)
+	// Use platform-appropriate invalid path
+	var invalidPath string
+	if runtime.GOOS == "windows" {
+		// On Windows, use characters that are not allowed in file paths
+		invalidPath = `C:\invalid\path\with<invalid>characters\async.log`
+	} else {
+		// On Unix-like systems, use a path that requires root permissions
+		invalidPath = "/proc/invalid/path/that/does/not/exist/async.log"
+	}
+
+	_, err := NewAsyncFileSink(invalidPath, 0, 0, 10)
 	if err == nil {
 		t.Error("NewAsyncFileSink should fail with invalid path")
 	}
@@ -1361,8 +1380,17 @@ func TestNewDefaultFileSinkPanic(t *testing.T) {
 		}
 	}()
 
-	// Try to create file in root directory (should fail due to permissions)
-	NewDefaultFileSink("/invalid/path/test.log", time.Hour)
+	// Use platform-appropriate invalid path that will definitely fail
+	var invalidPath string
+	if runtime.GOOS == "windows" {
+		// On Windows, use characters that are not allowed in file paths
+		invalidPath = `C:\invalid\path\with<invalid>characters\test.log`
+	} else {
+		// On Unix-like systems, use a path that requires root permissions
+		invalidPath = "/proc/invalid/path/test.log"
+	}
+
+	NewDefaultFileSink(invalidPath, time.Hour)
 }
 
 // TEST: GIVEN async file sink writer loop WHEN errors occur THEN they are handled gracefully
