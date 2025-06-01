@@ -291,7 +291,9 @@ func BenchmarkConsoleSink(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sink.Write(entries)
+		if err := sink.Write(entries); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -302,14 +304,24 @@ func BenchmarkFileSink(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			b.Logf("Failed to remove temp file: %v", err)
+		}
+	}()
+	if err := tmpFile.Close(); err != nil {
+		b.Fatal(err)
+	}
 
 	sink, err := NewFileSink(tmpFile.Name(), 0, 0) // No rotation for benchmark
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			b.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	entries := make([]*Entry, 10)
 	for i := range entries {
@@ -325,7 +337,9 @@ func BenchmarkFileSink(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sink.Write(entries)
+		if err := sink.Write(entries); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -336,14 +350,24 @@ func BenchmarkAsyncFileSink(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-	tmpFile.Close()
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			b.Logf("Failed to remove temp file: %v", err)
+		}
+	}()
+	if err := tmpFile.Close(); err != nil {
+		b.Fatal(err)
+	}
 
 	sink, err := NewAsyncFileSink(tmpFile.Name(), 0, 0, 1000)
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			b.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	entries := make([]*Entry, 10)
 	for i := range entries {
@@ -359,7 +383,9 @@ func BenchmarkAsyncFileSink(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sink.Write(entries)
+		if err := sink.Write(entries); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -440,20 +466,4 @@ func BenchmarkConcurrentLogging(b *testing.B) {
 		worker.Stop()
 	}
 	logger.wg.Wait()
-}
-
-// Example benchmark results output
-func ExampleBenchmarkResults() {
-	// Run: go test -bench=. -benchmem
-	//
-	// Expected results (approximate):
-	// BenchmarkLogInfo-8                    	10000000	       120 ns/op	      48 B/op	       1 allocs/op
-	// BenchmarkLogInfoWithFields-8          	 5000000	       250 ns/op	     128 B/op	       2 allocs/op
-	// BenchmarkLogLevelFiltering-8          	50000000	        25 ns/op	       0 B/op	       0 allocs/op
-	// BenchmarkJSONMarshal-8                	 2000000	       800 ns/op	     256 B/op	       3 allocs/op
-	// BenchmarkRingBuffer-8                 	20000000	        85 ns/op	       0 B/op	       0 allocs/op
-	// BenchmarkConsoleSink-8                	  100000	     15000 ns/op	    2560 B/op	      20 allocs/op
-	// BenchmarkFileSink-8                   	  200000	      8000 ns/op	    2560 B/op	      20 allocs/op
-	// BenchmarkAsyncFileSink-8              	 1000000	      1200 ns/op	    2560 B/op	      20 allocs/op
-	// BenchmarkConcurrentLogging-8          	 8000000	       180 ns/op	      48 B/op	       1 allocs/op
 }

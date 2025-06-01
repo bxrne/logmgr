@@ -89,13 +89,14 @@ func NewDefaultFileSink(filename string, maxAge time.Duration) *FileSink {
 	return fs
 }
 
-// openFile opens or creates the log file and initializes the buffered writer.
-// This method ensures the directory structure exists and gets the current file size.
+// openFile opens the log file for writing and initializes the buffered writer.
+// If the file doesn't exist, it will be created. If it exists, it will be opened
+// in append mode to preserve existing log entries.
 func (fs *FileSink) openFile() error {
-	// Ensure directory exists
+	// Create directory if it doesn't exist
 	dir := filepath.Dir(fs.filename)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+		return fmt.Errorf("failed to create log directory: %w", err)
 	}
 
 	// Open file in append mode
@@ -107,7 +108,9 @@ func (fs *FileSink) openFile() error {
 	// Get current file size
 	stat, err := file.Stat()
 	if err != nil {
-		file.Close()
+		if closeErr := file.Close(); closeErr != nil {
+			return fmt.Errorf("failed to get file stat: %w (close error: %v)", err, closeErr)
+		}
 		return err
 	}
 
@@ -144,10 +147,14 @@ func (fs *FileSink) shouldRotate() bool {
 func (fs *FileSink) rotate() error {
 	// Close current file
 	if fs.writer != nil {
-		fs.writer.Flush()
+		if err := fs.writer.Flush(); err != nil {
+			return fmt.Errorf("failed to flush writer during rotation: %w", err)
+		}
 	}
 	if fs.file != nil {
-		fs.file.Close()
+		if err := fs.file.Close(); err != nil {
+			return fmt.Errorf("failed to close file during rotation: %w", err)
+		}
 	}
 
 	// Rename current file with timestamp
@@ -158,7 +165,9 @@ func (fs *FileSink) rotate() error {
 
 	// Only rename if the file exists and has content
 	if stat, err := os.Stat(fs.filename); err == nil && stat.Size() > 0 {
-		os.Rename(fs.filename, rotatedName)
+		if err := os.Rename(fs.filename, rotatedName); err != nil {
+			return fmt.Errorf("failed to rename file during rotation: %w", err)
+		}
 	}
 
 	// Open new file
@@ -203,7 +212,9 @@ func (fs *FileSink) Write(entries []*Entry) error {
 		if err != nil {
 			return err
 		}
-		fs.writer.WriteByte('\n')
+		if err := fs.writer.WriteByte('\n'); err != nil {
+			return err
+		}
 		fs.currentSize += int64(n + 1)
 	}
 
@@ -223,7 +234,9 @@ func (fs *FileSink) Close() error {
 	defer fs.mu.Unlock()
 
 	if fs.writer != nil {
-		fs.writer.Flush()
+		if err := fs.writer.Flush(); err != nil {
+			return fmt.Errorf("failed to flush writer during close: %w", err)
+		}
 	}
 
 	if fs.file != nil {
@@ -307,7 +320,12 @@ func (afs *AsyncFileSink) writerLoop() {
 	for {
 		select {
 		case entries := <-afs.buffer:
-			afs.FileSink.Write(entries)
+			// Log write errors but don't crash the writer loop
+			if err := afs.FileSink.Write(entries); err != nil {
+				// In a real application, you might want to log this error
+				// to a fallback location or handle it appropriately
+				_ = err
+			}
 		case <-ticker.C:
 			// Periodic flush (handled by FileSink.Write)
 		case <-afs.done:
@@ -315,7 +333,10 @@ func (afs *AsyncFileSink) writerLoop() {
 			for {
 				select {
 				case entries := <-afs.buffer:
-					afs.FileSink.Write(entries)
+					if err := afs.FileSink.Write(entries); err != nil {
+						// Log write errors but continue draining
+						_ = err
+					}
 				default:
 					return
 				}

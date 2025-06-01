@@ -55,8 +55,12 @@ func (cs *ConsoleSink) Write(entries []*Entry) error {
 		}
 
 		// Write JSON + newline
-		cs.writer.Write(data)
-		cs.writer.WriteByte('\n')
+		if _, err := cs.writer.Write(data); err != nil {
+			return err
+		}
+		if err := cs.writer.WriteByte('\n'); err != nil {
+			return err
+		}
 	}
 
 	// Flush the buffer
@@ -126,8 +130,12 @@ func (ss *StderrSink) Write(entries []*Entry) error {
 			continue
 		}
 
-		ss.writer.Write(data)
-		ss.writer.WriteByte('\n')
+		if _, err := ss.writer.Write(data); err != nil {
+			return err
+		}
+		if err := ss.writer.WriteByte('\n'); err != nil {
+			return err
+		}
 	}
 
 	return ss.writer.Flush()

@@ -423,7 +423,11 @@ func Shutdown() {
 	// Close all sinks
 	logger.sinksMu.RLock()
 	for _, sink := range logger.sinks {
-		sink.Close()
+		if err := sink.Close(); err != nil {
+			// In a real application, you might want to log this error
+			// to a fallback location or handle it appropriately
+			_ = err
+		}
 	}
 	logger.sinksMu.RUnlock()
 }
@@ -484,7 +488,10 @@ func resetGlobalLogger() {
 		// Close existing sinks
 		globalLogger.sinksMu.RLock()
 		for _, sink := range globalLogger.sinks {
-			sink.Close()
+			if err := sink.Close(); err != nil {
+				// In tests, we might want to ignore close errors
+				_ = err
+			}
 		}
 		globalLogger.sinksMu.RUnlock()
 	}

@@ -3,7 +3,6 @@
 [![CI](https://github.com/bxrne/logmgr/workflows/CI/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/ci.yml)
 [![Release](https://github.com/bxrne/logmgr/workflows/Release/badge.svg)](https://github.com/bxrne/logmgr/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bxrne/logmgr)](https://goreportcard.com/report/github.com/bxrne/logmgr)
-[![codecov](https://codecov.io/gh/bxrne/logmgr/branch/main/graph/badge.svg)](https://codecov.io/gh/bxrne/logmgr)
 [![GoDoc](https://godoc.org/github.com/bxrne/logmgr?status.svg)](https://godoc.org/github.com/bxrne/logmgr)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/release/bxrne/logmgr.svg)](https://github.com/bxrne/logmgr/releases)

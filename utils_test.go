@@ -329,84 +329,57 @@ func TestSetSinks(t *testing.T) {
 
 // Test console sink
 func TestConsoleSink(t *testing.T) {
-	// Redirect stdout to capture output
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	testStreamSink(t, "console", NewConsoleSink(), &os.Stdout, "test message", "Console output should contain test message")
+}
 
-	sink := NewConsoleSink()
+func TestStderrSink(t *testing.T) {
+	testStreamSink(t, "stderr", NewStderrSink(), &os.Stderr, "error message", "Stderr output should contain error message")
+}
+
+// Helper function to test stream sinks (console and stderr)
+func testStreamSink(t *testing.T, name string, sink Sink, stream **os.File, message, expectation string) {
+	// Redirect stream to capture output
+	oldStream := *stream
+	r, w, _ := os.Pipe()
+	*stream = w
+
 	entries := []*Entry{
 		{
 			Level:     InfoLevel,
 			Timestamp: time.Now(),
-			Message:   "test message",
+			Message:   message,
 			Fields:    map[string]interface{}{"key": "value"},
 		},
 	}
 
 	err := sink.Write(entries)
 	if err != nil {
-		t.Errorf("ConsoleSink.Write() error = %v", err)
+		t.Errorf("%sSink.Write() error = %v", name, err)
 	}
 
 	err = sink.Close()
 	if err != nil {
-		t.Errorf("ConsoleSink.Close() error = %v", err)
+		t.Errorf("%sSink.Close() error = %v", name, err)
 	}
 
-	// Restore stdout
-	w.Close()
-	os.Stdout = oldStdout
+	// Restore stream
+	if err := w.Close(); err != nil {
+		t.Logf("Failed to close pipe writer: %v", err)
+	}
+	*stream = oldStream
 
 	// Read captured output
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	r.Close()
+	if _, err := io.Copy(&buf, r); err != nil {
+		t.Logf("Failed to copy from pipe reader: %v", err)
+	}
+	if err := r.Close(); err != nil {
+		t.Logf("Failed to close pipe reader: %v", err)
+	}
 
 	output := buf.String()
-	if !strings.Contains(output, "test message") {
-		t.Error("Console output should contain test message")
-	}
-}
-
-func TestStderrSink(t *testing.T) {
-	// Redirect stderr to capture output
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	sink := NewStderrSink()
-	entries := []*Entry{
-		{
-			Level:     ErrorLevel,
-			Timestamp: time.Now(),
-			Message:   "error message",
-			Fields:    map[string]interface{}{"error": "test"},
-		},
-	}
-
-	err := sink.Write(entries)
-	if err != nil {
-		t.Errorf("StderrSink.Write() error = %v", err)
-	}
-
-	err = sink.Close()
-	if err != nil {
-		t.Errorf("StderrSink.Close() error = %v", err)
-	}
-
-	// Restore stderr
-	w.Close()
-	os.Stderr = oldStderr
-
-	// Read captured output
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	r.Close()
-
-	output := buf.String()
-	if !strings.Contains(output, "error message") {
-		t.Error("Stderr output should contain error message")
+	if !strings.Contains(output, message) {
+		t.Error(expectation)
 	}
 }
 
@@ -420,7 +393,11 @@ func TestFileSink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			t.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	entries := []*Entry{
 		{
@@ -461,7 +438,11 @@ func TestFileSinkRotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer sink.Close()
+	defer func() {
+		if err := sink.Close(); err != nil {
+			t.Logf("Failed to close sink: %v", err)
+		}
+	}()
 
 	// Write enough data to trigger rotation
 	entries := []*Entry{
@@ -486,7 +467,9 @@ func TestFileSinkRotation(t *testing.T) {
 		}
 	}
 
-	sink.Close()
+	if err := sink.Close(); err != nil {
+		t.Errorf("FileSink.Close() error = %v", err)
+	}
 
 	// Check that rotation occurred (rotated file should exist)
 	files, err := filepath.Glob(filepath.Join(tmpDir, "rotate_*.log"))
@@ -771,8 +754,12 @@ func (ts *testSink) Write(entries []*Entry) error {
 		if err != nil {
 			continue
 		}
-		ts.writer.Write(data)
-		ts.writer.Write([]byte("\n"))
+		if _, err := ts.writer.Write(data); err != nil {
+			return err
+		}
+		if _, err := ts.writer.Write([]byte("\n")); err != nil {
+			return err
+		}
 	}
 	return nil
 }
