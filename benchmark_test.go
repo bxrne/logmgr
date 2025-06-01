@@ -272,8 +272,17 @@ func BenchmarkRingBuffer(b *testing.B) {
 func BenchmarkConsoleSink(b *testing.B) {
 	// Redirect stdout to null to avoid terminal overhead
 	oldStdout := os.Stdout
-	os.Stdout, _ = os.Open(os.DevNull)
-	defer func() { os.Stdout = oldStdout }()
+	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0644)
+	if err != nil {
+		b.Fatal(err)
+	}
+	os.Stdout = devNull
+	defer func() {
+		os.Stdout = oldStdout
+		if err := devNull.Close(); err != nil {
+			b.Logf("Failed to close devNull: %v", err)
+		}
+	}()
 
 	sink := NewConsoleSink()
 	entries := make([]*Entry, 10)
