@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/bxrne/logmgr/compare/v1.1.1...v1.1.2) (2025-06-01)
+
+
+### Code Refactoring
+
+* improve log entry processing and enhance README with performance metrics ([5420420](https://github.com/bxrne/logmgr/commit/54204203460c2a4e63be2dbaeeb463a4524a4a50))
+
 ## [1.1.1](https://github.com/bxrne/logmgr/compare/v1.1.0...v1.1.1) (2025-06-01)
 
 
