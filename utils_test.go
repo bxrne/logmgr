@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -1361,8 +1362,17 @@ func TestNewDefaultFileSinkPanic(t *testing.T) {
 		}
 	}()
 
-	// Try to create file in root directory (should fail due to permissions)
-	NewDefaultFileSink("/invalid/path/test.log", time.Hour)
+	// Use different invalid paths for different OS
+	var invalidPath string
+	if runtime.GOOS == "windows" {
+		// On Windows, use an invalid drive letter
+		invalidPath = "Z:\\invalid\\path\\test.log"
+	} else {
+		// On Unix systems, try to create file in root directory (should fail due to permissions)
+		invalidPath = "/invalid/path/test.log"
+	}
+
+	NewDefaultFileSink(invalidPath, time.Hour)
 }
 
 // TEST: GIVEN async file sink writer loop WHEN errors occur THEN they are handled gracefully
@@ -1525,7 +1535,6 @@ func TestFileSinkWriteError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFileSink() error = %v", err)
 	}
-	defer func() { _ = sink.Close() }()
 
 	// Replace writer with failing writer
 	sink.writer = bufio.NewWriter(&failingWriter{})
@@ -1540,6 +1549,13 @@ func TestFileSinkWriteError(t *testing.T) {
 	err = sink.Write([]*Entry{entry})
 	if err == nil {
 		t.Error("Write() should return error with failing writer")
+	}
+
+	// Explicitly close the sink to release file handles before test cleanup
+	// This is especially important on Windows where file handles must be released
+	// before the file can be deleted
+	if closeErr := sink.Close(); closeErr != nil {
+		t.Logf("Warning: sink close error: %v", closeErr)
 	}
 }
 
