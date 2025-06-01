@@ -1,3 +1,18 @@
+## [1.1.3](https://github.com/bxrne/logmgr/compare/v1.1.2...v1.1.3) (2025-06-01)
+
+
+### Documentation
+
+* Update README.md ([b7b0d09](https://github.com/bxrne/logmgr/commit/b7b0d09824cd076e48c5b5d79ef6d1853beb1eda))
+
+
+### Continuous Integration
+
+* Potential fix for code scanning alert no. 1: Workflow does not contain permissions ([0702883](https://github.com/bxrne/logmgr/commit/070288320cb8da64034d8a13b5f69531e7f078dd))
+* Potential fix for code scanning alert no. 2: Workflow does not contain permissions ([50b2923](https://github.com/bxrne/logmgr/commit/50b292387f32c943ffeed74cbce2ededcf0b89a8))
+* Potential fix for code scanning alert no. 3: Workflow does not contain permissions ([f749571](https://github.com/bxrne/logmgr/commit/f749571a7a96b807d742b0b4756960de87225078))
+* Potential fix for code scanning alert no. 4: Workflow does not contain permissions ([e1e4bf5](https://github.com/bxrne/logmgr/commit/e1e4bf50f1811e3c52e187d83021b1ea282211bb))
+
 ## [1.1.2](https://github.com/bxrne/logmgr/compare/v1.1.1...v1.1.2) (2025-06-01)
 
 
