@@ -1,3 +1,11 @@
+## [1.1.6](https://github.com/bxrne/logmgr/compare/v1.1.5...v1.1.6) (2025-06-09)
+
+
+### Bug Fixes
+
+* fixed race condition ([2459bea](https://github.com/bxrne/logmgr/commit/2459beac362a06ef61e94701049909b16703d751))
+* improved shutdown and bounds handling ([f26078c](https://github.com/bxrne/logmgr/commit/f26078c3c735409163565171066e7bed654b4a52))
+
 ## [1.1.5](https://github.com/bxrne/logmgr/compare/v1.1.4...v1.1.5) (2025-06-01)
 
 
