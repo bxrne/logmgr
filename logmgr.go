@@ -137,6 +137,11 @@ func (rb *RingBuffer) Push(entry *Entry) bool {
 
 // Pop removes and returns entries from the ring buffer
 func (rb *RingBuffer) Pop(entries []*Entry) int {
+	// Safety checks to prevent panics
+	if rb == nil || entries == nil || len(entries) == 0 {
+		return 0
+	}
+
 	readPos := atomic.LoadUint64(&rb.readPos)
 	writePos := atomic.LoadUint64(&rb.writePos)
 
@@ -150,7 +155,16 @@ func (rb *RingBuffer) Pop(entries []*Entry) int {
 		count = len(entries)
 	}
 
+	// Additional bounds safety check
+	if count < 0 {
+		return 0
+	}
+
 	for i := 0; i < count; i++ {
+		// Ensure we don't go out of bounds
+		if i >= len(entries) {
+			break
+		}
 		ptr := atomic.LoadPointer(&rb.buffer[(readPos+uint64(i))&rb.mask])
 		entries[i] = (*Entry)(ptr)
 	}
@@ -169,6 +183,16 @@ type Worker struct {
 
 // NewWorker creates a new background worker
 func NewWorker(id int, logger *Logger, batchSize int) *Worker {
+	// Safety checks for parameters
+	if logger == nil {
+		return nil
+	}
+	
+	// Ensure minimum batch size to prevent bounds issues
+	if batchSize <= 0 {
+		batchSize = 256 // Default safe batch size
+	}
+	
 	return &Worker{
 		id:       id,
 		logger:   logger,
@@ -179,6 +203,11 @@ func NewWorker(id int, logger *Logger, batchSize int) *Worker {
 
 // Run starts the worker loop
 func (w *Worker) Run() {
+	// Safety check before starting
+	if w == nil || w.logger == nil {
+		return
+	}
+	
 	defer w.logger.wg.Done()
 
 	ticker := time.NewTicker(10 * time.Millisecond) // Flush every 10ms
@@ -197,8 +226,28 @@ func (w *Worker) Run() {
 
 // flush processes available entries
 func (w *Worker) flush() {
+	// Safety checks to prevent panics during shutdown
+	if w == nil || w.logger == nil || w.logger.buffer == nil || w.batch == nil {
+		return
+	}
+
+	// Additional safety check for batch slice
+	if len(w.batch) == 0 {
+		return
+	}
+
 	count := w.logger.buffer.Pop(w.batch)
 	if count == 0 {
+		return
+	}
+
+	// Bounds safety: ensure count doesn't exceed batch length
+	if count > len(w.batch) {
+		count = len(w.batch)
+	}
+
+	// Additional safety check after Pop
+	if count < 0 {
 		return
 	}
 
@@ -208,24 +257,32 @@ func (w *Worker) flush() {
 	copy(sinks, w.logger.sinks)
 	w.logger.sinksMu.RUnlock()
 
-	// Process entries with each sink
+	// Process entries with each sink - double-check bounds before slicing
 	for _, sink := range sinks {
-		if err := sink.Write(w.batch[:count]); err != nil {
-			// In a production system, you might want to handle this error
-			// For now, we continue to other sinks
-			_ = err
+		if sink != nil && count > 0 && count <= len(w.batch) {
+			if err := sink.Write(w.batch[:count]); err != nil {
+				// In a production system, you might want to handle this error
+				// For now, we continue to other sinks
+				_ = err
+			}
 		}
 	}
 
-	// Return entries to pool
-	for i := 0; i < count; i++ {
-		w.logger.entryPool.Put(w.batch[i])
-		w.batch[i] = nil // Clear reference
+	// Return entries to pool - with bounds checking
+	for i := 0; i < count && i < len(w.batch); i++ {
+		if w.batch[i] != nil && w.logger != nil {
+			w.logger.entryPool.Put(w.batch[i])
+			w.batch[i] = nil // Clear reference
+		}
 	}
 }
 
 // Stop stops the worker
 func (w *Worker) Stop() {
+	if w == nil {
+		return
+	}
+	
 	select {
 	case <-w.shutdown:
 		// Already stopped
