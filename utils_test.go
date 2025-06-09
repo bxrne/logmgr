@@ -113,8 +113,8 @@ func TestEntryJSONMarshal(t *testing.T) {
 					"success": true,
 				},
 			},
-			// Note: field order in JSON may vary due to map iteration
-			expected: `{"level":"warn","timestamp":"2024-01-15T10:30:45.123456789Z","message":"warning message"`,
+			// Fields are now sorted alphabetically: action, success, user_id
+			expected: `{"level":"warn","timestamp":"2024-01-15T10:30:45.123456789Z","message":"warning message","action":"login","success":true,"user_id":12345}`,
 		},
 	}
 
@@ -128,21 +128,9 @@ func TestEntryJSONMarshal(t *testing.T) {
 
 			resultStr := string(result)
 
-			// For entries with multiple fields, just check that it starts correctly
-			// since field order in maps is not guaranteed
-			if tt.name == "entry with multiple fields" {
-				if !contains(resultStr, `"level":"warn"`) ||
-					!contains(resultStr, `"timestamp":"2024-01-15T10:30:45.123456789Z"`) ||
-					!contains(resultStr, `"message":"warning message"`) ||
-					!contains(resultStr, `"user_id":12345`) ||
-					!contains(resultStr, `"action":"login"`) ||
-					!contains(resultStr, `"success":true`) {
-					t.Errorf("MarshalJSON() = %v, missing expected fields", resultStr)
-				}
-			} else {
-				if resultStr != tt.expected {
-					t.Errorf("MarshalJSON() = %v, want %v", resultStr, tt.expected)
-				}
+			// Field order is now deterministic, so we can check exact match
+			if resultStr != tt.expected {
+				t.Errorf("MarshalJSON() = %v, want %v", resultStr, tt.expected)
 			}
 		})
 	}

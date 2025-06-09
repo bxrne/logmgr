@@ -18,6 +18,7 @@ Ultra-high performance, zero-config logging library for Go that manages everythi
 - **📊 JSON Output**: ELK/Loki/Grafana compatible structured logging
 - **🔄 Decoupled I/O**: Async background workers for non-blocking logging
 - **📋 Deterministic**: Consistent field ordering for reliable parsing
+- **🛡️ Production Safe**: Race condition protection and bounds checking
 - **🎯 Multiple Outputs**: Console, file with rotation, custom sinks
 - **📈 Multiple Levels**: Debug, Info, Warn, Error, Fatal with filtering
 - **🔧 Zero Config**: Works out of the box with sensible defaults
@@ -230,24 +231,33 @@ if logmgr.GetLevel() <= logmgr.DebugLevel {
 
 ## JSON Output Format
 
-Fields are flattened directly into the root JSON object for better performance and easier parsing:
+Fields are flattened directly into the root JSON object for better performance and easier parsing. **Field ordering is deterministic** for consistent log parsing:
+
+### Field Ordering Convention
+
+1. **`level`** - Always first for easy filtering
+2. **`timestamp`** - Always second for chronological sorting  
+3. **`message`** - Always third for human readability
+4. **Custom fields** - Sorted alphabetically by key name
+
+This ensures consistent output across all log entries, making parsing and analysis predictable.
 
 ```json
 {
   "level": "info",
   "timestamp": "2024-01-15T10:30:45.123456789Z",
   "message": "User logged in",
-  "user_id": 12345,
   "action": "login",
-  "ip": "192.168.1.1"
+  "ip": "192.168.1.1",
+  "user_id": 12345
 }
 ```
 
-Error example:
+Error example with alphabetically sorted custom fields:
 ```json
 {
   "level": "error",
-  "timestamp": "2024-01-15T10:30:45.123456789Z",
+  "timestamp": "2024-01-15T10:30:45.123456789Z", 
   "message": "Database connection failed",
   "error": "connection timeout",
   "host": "db.example.com",
@@ -255,6 +265,14 @@ Error example:
   "retries": 3
 }
 ```
+
+### Safety Features
+
+- **Slice bounds protection**: Prevents runtime panics during high-load scenarios
+- **Race condition handling**: Safe concurrent access to ring buffers and worker pools
+- **Nil pointer safety**: Defensive programming against edge cases
+- **Overflow protection**: Handles uint64 to int conversions safely
+- **Memory bounds checking**: Prevents buffer overruns and out-of-bounds access
 
 ## API Reference
 

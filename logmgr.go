@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -121,6 +122,11 @@ func NewRingBuffer(size uint64) *RingBuffer {
 
 // Push adds an entry to the ring buffer (lock-free)
 func (rb *RingBuffer) Push(entry *Entry) bool {
+	// Safety checks
+	if rb == nil || entry == nil || rb.buffer == nil {
+		return false
+	}
+
 	writePos := atomic.LoadUint64(&rb.writePos)
 	readPos := atomic.LoadUint64(&rb.readPos)
 
@@ -137,25 +143,51 @@ func (rb *RingBuffer) Push(entry *Entry) bool {
 
 // Pop removes and returns entries from the ring buffer
 func (rb *RingBuffer) Pop(entries []*Entry) int {
+	// Safety checks
+	if rb == nil || entries == nil || len(entries) == 0 || rb.buffer == nil {
+		return 0
+	}
+
 	readPos := atomic.LoadUint64(&rb.readPos)
 	writePos := atomic.LoadUint64(&rb.writePos)
+
+	// Handle race condition where readPos might exceed writePos
+	if writePos < readPos {
+		return 0
+	}
 
 	available := writePos - readPos
 	if available == 0 {
 		return 0
 	}
 
+	// Safely convert uint64 to int with bounds checking
 	count := int(available)
+	maxInt := int(^uint(0) >> 1)    // Calculate max int value
+	if available > uint64(maxInt) { // Check for int overflow
+		count = maxInt // Set to max int value
+	}
 	if count > len(entries) {
 		count = len(entries)
+	}
+	if count < 0 { // Additional safety check
+		return 0
 	}
 
 	for i := 0; i < count; i++ {
 		ptr := atomic.LoadPointer(&rb.buffer[(readPos+uint64(i))&rb.mask])
-		entries[i] = (*Entry)(ptr)
+		if ptr != nil {
+			entries[i] = (*Entry)(ptr)
+		} else {
+			// If we encounter a nil pointer, stop processing to avoid corruption
+			count = i
+			break
+		}
 	}
 
-	atomic.AddUint64(&rb.readPos, uint64(count))
+	if count > 0 {
+		atomic.AddUint64(&rb.readPos, uint64(count))
+	}
 	return count
 }
 
@@ -169,6 +201,10 @@ type Worker struct {
 
 // NewWorker creates a new background worker
 func NewWorker(id int, logger *Logger, batchSize int) *Worker {
+	// Ensure minimum batch size to prevent slice issues
+	if batchSize < 1 {
+		batchSize = 256
+	}
 	return &Worker{
 		id:       id,
 		logger:   logger,
@@ -198,8 +234,13 @@ func (w *Worker) Run() {
 // flush processes available entries
 func (w *Worker) flush() {
 	count := w.logger.buffer.Pop(w.batch)
-	if count == 0 {
+	if count <= 0 {
 		return
+	}
+
+	// Additional safety check for slice bounds
+	if count > len(w.batch) {
+		count = len(w.batch)
 	}
 
 	// Take a snapshot of sinks to reduce lock contention
@@ -210,17 +251,21 @@ func (w *Worker) flush() {
 
 	// Process entries with each sink
 	for _, sink := range sinks {
-		if err := sink.Write(w.batch[:count]); err != nil {
-			// In a production system, you might want to handle this error
-			// For now, we continue to other sinks
-			_ = err
+		if sink != nil && count > 0 && count <= len(w.batch) {
+			if err := sink.Write(w.batch[:count]); err != nil {
+				// In a production system, you might want to handle this error
+				// For now, we continue to other sinks
+				_ = err
+			}
 		}
 	}
 
-	// Return entries to pool
-	for i := 0; i < count; i++ {
-		w.logger.entryPool.Put(w.batch[i])
-		w.batch[i] = nil // Clear reference
+	// Return entries to pool with additional safety checks
+	for i := 0; i < count && i < len(w.batch); i++ {
+		if w.batch[i] != nil {
+			w.logger.entryPool.Put(w.batch[i])
+			w.batch[i] = nil // Clear reference
+		}
 	}
 }
 
@@ -362,7 +407,9 @@ func log(level Level, message string, fields ...LogField) {
 
 	// Populate fields
 	for _, field := range fields {
-		entry.Fields[field.Key] = field.Value
+		if field.Key != "" { // Only add fields with non-empty keys
+			entry.Fields[field.Key] = field.Value
+		}
 	}
 
 	// Try to push to buffer (non-blocking)
@@ -464,32 +511,47 @@ func Shutdown() {
 }
 
 // MarshalJSON implements custom JSON marshaling for Entry with flattened fields
+// Field ordering convention: level, timestamp, message, then custom fields in alphabetical order
 func (e *Entry) MarshalJSON() ([]byte, error) {
-	// Reset buffer, keeping capacity
+	// Reset buffer, keeping capacity - with nil safety
+	if e.buffer == nil {
+		e.buffer = make([]byte, 0, 512)
+	}
 	e.buffer = e.buffer[:0]
 	e.buffer = append(e.buffer, '{')
 
-	// Level (always first)
+	// Level (always first for easy parsing)
 	e.buffer = append(e.buffer, `"level":"`...)
 	e.buffer = append(e.buffer, e.Level.String()...)
 	e.buffer = append(e.buffer, '"')
 
-	// Timestamp - keep RFC3339Nano for precision and compatibility
+	// Timestamp (always second for consistent ordering)
 	e.buffer = append(e.buffer, `,"timestamp":"`...)
 	e.buffer = append(e.buffer, e.Timestamp.Format(time.RFC3339Nano)...)
 	e.buffer = append(e.buffer, '"')
 
-	// Message - fast path for simple strings, fallback to json.Marshal for complex cases
+	// Message (always third for consistent ordering)
 	e.buffer = append(e.buffer, `,"message":`...)
 	e.buffer = appendJSONString(e.buffer, e.Message)
 
-	// Fields (flattened into root object)
-	for key, value := range e.Fields {
-		e.buffer = append(e.buffer, ',')
-		e.buffer = append(e.buffer, '"')
-		e.buffer = append(e.buffer, key...)
-		e.buffer = append(e.buffer, `":`...)
-		e.buffer = appendJSONValue(e.buffer, value)
+	// Custom fields in alphabetical order for deterministic output
+	if len(e.Fields) > 0 {
+		// Get sorted keys
+		keys := make([]string, 0, len(e.Fields))
+		for key := range e.Fields {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		// Output fields in alphabetical order
+		for _, key := range keys {
+			value := e.Fields[key]
+			e.buffer = append(e.buffer, ',')
+			e.buffer = append(e.buffer, '"')
+			e.buffer = append(e.buffer, key...)
+			e.buffer = append(e.buffer, `":`...)
+			e.buffer = appendJSONValue(e.buffer, value)
+		}
 	}
 
 	e.buffer = append(e.buffer, '}')
