@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/sirupsen/logrus v1.9.4
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.28.0
 )
 
 require (
